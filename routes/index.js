@@ -6,6 +6,7 @@ import CreateAccount from '../screens/CreateAccount';
 import CreateUser from '../screens/CreateUser';
 import CreateClient from '../screens/CreateClient';
 import Login from '../screens/Login';
+import Details from '../screens/Details';
 
 
 const Stack = createNativeStackNavigator();
@@ -19,6 +20,7 @@ const Index = () => {
         <Stack.Screen name="CreateUser" component={CreateUser}/>
         <Stack.Screen name="CreateClient" component={CreateClient}/>
         <Stack.Screen name="Login" component={Login}/>
+        <Stack.Screen name="Details" component={Details}  options={{ headerShown: true }} />
         <Stack.Screen name="Home" component={BottomTabs} />
       </Stack.Navigator>
     </NavigationContainer>

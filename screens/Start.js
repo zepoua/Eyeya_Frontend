@@ -11,7 +11,7 @@ const Start = ({ navigation }) => {
       if (user !== null) {
         navigation.navigate('Home');
       } else {
-        navigation.navigate('CreateAccount');
+        navigation.navigate('CreateClient');
       }
     } catch (error) {
       Alert.alert('error')
@@ -30,8 +30,11 @@ const Start = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/images/start.png')} style={styles.logo} />
-      <Text style={styles.text}>Welcome to My App</Text>
+      <Image 
+      source={require('../assets/images/load.jpeg')} style={styles.logo} />
+      <View style={styles.contentContainer}>
+          <Text style={styles.bottomText}>WELCOME TO MY APP.....</Text>
+      </View>    
     </View>
   );
 };
@@ -41,19 +44,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff', // Couleur de fond
   },
   logo: {
-    width: 350,
-    height: 350,
-    resizeMode: 'contain', // Ajustez la taille de l'image
+    flex: 1,
+    width: '100%', // Utilisez '100%' pour couvrir toute la largeur de l'écran
+    height: '100%', // Utilisez '100%' pour couvrir toute la hauteur de l'écran
+    resizeMode: 'cover',
+    position: 'absolute',
   },
-  text: {
-    marginTop: 20,
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'flex-end', // Positionne le contenu en bas de l'écran
+    alignItems: 'center',
+    marginBottom: 40, // Ajustez la marge selon vos besoins
+  },
+  bottomText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333', // Couleur du texte
+    color: 'white', // Couleur du texte
   },
+
 });
 
 export default Start;

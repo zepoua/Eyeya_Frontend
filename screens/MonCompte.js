@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Button } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const MonCompte = () => {
+const MonCompte = ({navigation}) => {
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
@@ -25,6 +25,15 @@ const MonCompte = () => {
     fetchUserData();
   }, []);
 
+  const reset = async () =>{
+      try {
+         await AsyncStorage.removeItem("formDataToSend");
+          navigation.navigate('Start')
+      } catch (error) {
+        alert(error)
+      }
+  }
+
   return (
     <View>
       {userData ? (
@@ -32,12 +41,19 @@ const MonCompte = () => {
           <Text>Bienvenue, {userData.prenom} {userData.nom}!</Text>
           <Text>Email: {userData.email}</Text>
           <Text>Téléphone: {userData.telephone}</Text>
+          <Text>Identifiant: {userData.id}</Text>
           {/* Ajoutez d'autres éléments de la page d'accueil ici */}
         </>
       ) : (
         <Text>Aucune donnée utilisateur trouvée.</Text>
       )}
-    </View>
+
+          <Button
+            onPress={reset}
+            title="supprimer"
+            accessibilityLabel="Learn more about this purple button"
+          />    
+  </View>
   );
 };
 

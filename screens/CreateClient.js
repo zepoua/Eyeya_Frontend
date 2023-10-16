@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TextInput, StyleSheet, Button } from 'react-native'
+import { View, Text, ScrollView, TextInput, StyleSheet, Button, TouchableHighlight } from 'react-native'
 import React from 'react'
 import { useState } from 'react';
 import { Alert } from 'react-native-windows';
@@ -42,10 +42,15 @@ const CreateClient = ({navigation}) => {
       fetch(apiUrl, requestOptions)
         .then((response) => response.json())
         .then((data) => {
+          const id = data.client_id;
+          const dataToStoreLocally ={
+            id,
+            ...formDataToSend,
+          }
           if (data.status == 'success') {
             Alert.alert(data.message);
             try{
-              AsyncStorage.setItem('formDataToSend', JSON.stringify(formDataToSend))
+              AsyncStorage.setItem('formDataToSend', JSON.stringify(dataToStoreLocally))
                   .then(() => {
                       console.log('Données stockées localement');
                   });
@@ -57,7 +62,7 @@ const CreateClient = ({navigation}) => {
               nom: '',
               prenom: '',
               email: '',
-              telephone: ''
+              telephone: '',
             })
           } else {
             Alert.alert(data);
@@ -131,13 +136,27 @@ const CreateClient = ({navigation}) => {
               <Button title="Annuler" color= "red" onPress={handleReset}/>
             </View>
         </ScrollView>
+        <View style={{flexDirection: 'row', justifyContent: 'center', marginBottom: 50}}>
+          <Text style={{textAlign:'center', fontWeight: 'bold'}}>
+            Etes-vous un Professionnel ? 
+          </Text>
+          <TouchableHighlight 
+            onPress={() => {navigation.navigate('CreateUser')}}
+            activeOpacity={0.8} 
+            underlayColor='#EFF7F6E5'>
+              <Text style={{textAlign:'center', marginLeft: 6, fontWeight: 'bold', color:'#18055EE5'}}>
+                Inscrivez-vous ici !
+              </Text>
+            </TouchableHighlight>
+        </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
     Container: {
-      margin: 20
+      margin: 20,
+      flex:1
     },
     libelle: {
       fontSize: 20,
