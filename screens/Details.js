@@ -4,6 +4,7 @@ import { View, Text, ScrollView, Image, StyleSheet, TouchableOpacity, Modal, But
 import CommentModal from './Commentaires';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import StarRating from 'react-native-star-rating'; // Vous pouvez utiliser une bibliothèque pour les étoiles
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
@@ -13,10 +14,49 @@ const Details = ({ route, navigation }) => {
   const [isCommentModalVisible, setCommentModalVisible] = useState(false);
   const [isRatingModalVisible, setRatingModalVisible] = useState(false);
   const [rating, setRating] = useState(0);
+  const [userData, setUserData] = useState(null);
 
-  const handleRating = () => {
-    // Envoyer la note à votre API ici
-    setRatingModalVisible(false);
+  const handleRating = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('formDataToSend');
+  
+      if (storedData !== null) {
+        // Convertir la chaîne JSON en objet JavaScript
+        const parsedData = JSON.parse(storedData);
+        setUserData(parsedData);
+  
+        const formDataToSend = {
+          user_id: professionalId,
+          client_id: parsedData.id, // Utilisez parsedData au lieu de userData ici
+          nbre_etoiles: rating,
+        };
+  
+        const apiUrl = 'http://192.168.1.242:8000/api/enreg_notation';
+        const requestOptions = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formDataToSend),
+        };
+  
+        // Effectuez la requête fetch vers votre API
+        fetch(apiUrl, requestOptions)
+          .then((response) => response.json())
+          .then((data) => {
+            setProfessionals({
+              ...professionals,
+              moyenne_notations : data
+            })
+            setRating(0)       
+          })
+          .catch((error) => {
+            console.error('Erreur :', error.message);
+          });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données :', error);
+    }    setRatingModalVisible(false);
   };
 
 

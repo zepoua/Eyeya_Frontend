@@ -10,10 +10,6 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
   const [userData, setUserData] = useState(null);
 
 
-  const handleInputChange = (text) => {
-    setNewComment(text);
-  };
-
   useEffect(() => {
     if (userId) {
       const apiUrl = `http://192.168.1.242:8000/api/commentaire/${userId}`;
@@ -57,10 +53,9 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
       fetch(apiUrl, requestOptions)
         .then((response) => response.json())
         .then((data) => {
-          Alert.alert(data);
-          setNewComment({
-            newComment: '',
-          });
+          setComments((prevComments) => [...prevComments, data]);
+          console.log(comments)
+          setNewComment('')       
         })
         .catch((error) => {
           console.error('Erreur :', error.message);
@@ -104,7 +99,7 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
               style={{ backgroundColor:'white', flex: 1, borderWidth: 1, borderColor: 'black', borderRadius: 15, padding: 8 }}
               placeholder="Ajouter un commentaire..."
               value={newComment}
-              onChangeText={handleInputChange}
+              onChangeText={(text) => setNewComment(text)}
             />
             <TouchableOpacity onPress={handleAddComment} style={{ marginLeft: 8 }}>
               <Text>Ajouter</Text>

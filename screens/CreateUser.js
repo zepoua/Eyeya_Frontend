@@ -18,14 +18,12 @@ const CreateUser = () => {
         telephone2: '',
         qualification: '',
         experience: '',
-        description: '',
-        image1: '',
-        image2: '',
-        image3: ''});
+        description: '',});
 
     const [domaines, setDomaines] = useState([]);
       // État pour stocker la valeur sélectionnée dans la liste déroulante
     const [selectedDomaine, setSelectedDomaine] = useState('');
+    
     
       // Effectuez une requête fetch pour obtenir les données des domaines
     useEffect(() => {
