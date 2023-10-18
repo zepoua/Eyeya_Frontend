@@ -117,7 +117,7 @@ const Recherche = ({navigation}) => {
                       maxStars={5}
                       rating={professional.moyenne_notations}
                       fullStarColor={'#FDE03A'}
-                      halfStar={'#494112'}/>   
+                      halfStarColor={'#494112'}/>   
                   </View>
                 </View>
                 </TouchableHighlight>

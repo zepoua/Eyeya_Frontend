@@ -2,6 +2,8 @@ import { View, Text, ScrollView, TextInput, StyleSheet, Button } from 'react-nat
 import React, { useState, useEffect } from 'react'
 import { Picker } from '@react-native-picker/picker';
 import { Alert } from 'react-native-windows';
+import * as ImagePicker from 'react-native-image-picker';
+
 
 
 const CreateUser = () => {
@@ -24,11 +26,10 @@ const CreateUser = () => {
       // État pour stocker la valeur sélectionnée dans la liste déroulante
     const [selectedDomaine, setSelectedDomaine] = useState('');
     
-    
       // Effectuez une requête fetch pour obtenir les données des domaines
     useEffect(() => {
         // Remplacez cette URL par l'URL de votre API qui fournit les données des domaines
-        const apiUrl = 'http://172.16.2.62:8000/api/domaine';
+        const apiUrl = 'http://192.168.1.242:8000/api/domaine';
     
         fetch(apiUrl)
           .then((response) => response.json())
@@ -46,6 +47,43 @@ const CreateUser = () => {
           [fieldName]: text,
         });
     };
+
+    const [Images1, setImages1] = useState([]);
+    const [Images2, setImages2] = useState([]);
+    const [Images3, setImages3] = useState([]);      
+
+    const selectImage = (index) => {
+        ImagePicker.launchImageLibrary(
+          {
+            title: 'Sélectionnez une image',
+            storageOptions: {
+              skipBackup: true,
+              path: '../assets/images',
+            },
+          },
+          (response) => {
+            if (response.didCancel) {
+              console.log('Annulé');
+            } else if (response.error) {
+              console.error('Erreur :', response.error);
+            } else {
+              switch (index) {
+                case 1:
+                setImages1([...result.assets]);
+                break;
+                case 2:
+                setImages2([...result.assets]);
+                break;
+                case 3:
+                setImages3([...result.assets]);
+                break;
+                default:
+                break;
+            }
+          }
+          }
+        );
+      };
     
     const handleSubmit = () => {
        
@@ -62,12 +100,12 @@ const CreateUser = () => {
             qualification: formData.qualification,
             experience: formData.experience,
             description: formData.description,
-            image1: formData.image1,
-            image2: formData.image2,
-            image3: formData.image3,
+            image1: Images1,
+            image2: Images2,
+            image3: Images3,
             domaine_id: selectedDomaine,
           };
-          const apiUrl = 'http://172.16.2.62:8000/api/user';
+          const apiUrl = 'http://192.168.1.242:8000/api/user';
           const requestOptions = {
             method: 'POST',
             headers: {
@@ -94,10 +132,7 @@ const CreateUser = () => {
                         telephone2: '',
                         qualification: '',
                         experience: '',
-                        description: '',
-                        image1: '',
-                        image2: '',
-                        image3: ''});
+                        description: '',});
                         setSelectedDomaine('');        
                 }else{
                     Alert.alert(data);
@@ -260,43 +295,14 @@ const CreateUser = () => {
                     style={styles.input}
                     value={formData.description}
                     onChangeText={(text) => handleFieldChange('description', text)}/>               
-               
-                <Text style={styles.libelle}>
-                    Image 1
-                </Text>
-                <TextInput 
-                    placeholder='ajoutez une image' 
-                    inputMode='text' 
-                    style={styles.input}
-                    value={formData.image1}
-                    onChangeText={(text) => handleFieldChange('image1', text)}/>
 
                 <Text style={styles.libelle}>
-                    Image 2
+                    Sélectionnez un domaine
                 </Text>
-                <TextInput 
-                    placeholder='ajoutez une image' 
-                    inputMode='text' 
-                    style={styles.input}
-                    value={formData.image2}
-                    onChangeText={(text) => handleFieldChange('image2', text)}/>
-
-                <Text style={styles.libelle}>
-                    Image 3
-                </Text>
-                <TextInput 
-                    placeholder='ajoutez une image' 
-                    inputMode='text' 
-                    style={styles.input}
-                    value={formData.image3}
-                    onChangeText={(text) => handleFieldChange('image3', text)}/>
-
-                <Text style={styles.libelle}>Sélectionnez un domaine :</Text>
                     <Picker
                         style={styles.input}
                         selectedValue={selectedDomaine}
-                        onValueChange={(itemValue, itemIndex) => setSelectedDomaine(itemValue)}
-                    >
+                        onValueChange={(itemValue, itemIndex) => setSelectedDomaine(itemValue)}>
                         <Picker.Item label="Sélectionnez un domaine" value="" />
                         {domaines.map((domaine) => (
                         <Picker.Item
@@ -307,8 +313,25 @@ const CreateUser = () => {
                         />
                         ))}
                     </Picker>
-                    <Text style={styles.libelle}>Domaine sélectionné : {selectedDomaine}</Text>
-
+                
+                <Text style={styles.libelle}>
+                    Photo de Profil
+                </Text>
+                <View style={{width: 250, borderRadius: 20}}>
+                    <Button title="Sélectionner une photo" onPress={() => selectImage(0)} />
+                </View>
+                <Text style={styles.libelle}>
+                    Photo de Couverture 
+                </Text>
+                <View style={{width: 250, borderRadius: 20}}>
+                    <Button title="Sélectionner une photo" onPress={() => selectImage(1)} />
+                </View>
+                <Text style={styles.libelle}>
+                    Autre Photo (optionnel)
+                </Text>
+                <View style={{width: 250, borderRadius: 20}}>
+                    <Button title="Sélectionner une photo" onPress={() => selectImage(2)} />
+                </View>
                 <View style={styles.fixToText}>
                 <Button title="Enregistrer" color= "green" onPress={handleSubmit}/>
                 <Button title="Annuler" color= "red" onPress={handleReset}/>

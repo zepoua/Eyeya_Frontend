@@ -14,7 +14,7 @@ const Stack = createNativeStackNavigator();
 const Index = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName='Start' screenOptions={{headerShown: false}}>
+      <Stack.Navigator initialRouteName='CreateUser' screenOptions={{headerShown: false}}>
         <Stack.Screen name="Start" component={Start} />
         <Stack.Screen name="CreateAccount" component={CreateAccount} />
         <Stack.Screen name="CreateUser" component={CreateUser}/>
