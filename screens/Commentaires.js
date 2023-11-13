@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, FlatList, TextInput, StyleSheet, Image} from 'react-native';
 import { Alert } from 'react-native-windows';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import apiConfig from '../services/config';
 
 
 const CommentModal = ({ isVisible, onClose, userId }) => {
@@ -12,7 +13,7 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
 
   useEffect(() => {
     if (userId) {
-      const apiUrl = `http://192.168.1.242:8000/api/commentaire/${userId}`;
+      const apiUrl = `${apiConfig.apiUrl}/commentaire/${userId}`;
 
       fetch(apiUrl)
         .then(response => response.json())
@@ -81,15 +82,15 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
             keyExtractor={item => (item.id != null ? item.id.toString() : Math.random().toString())}
             renderItem={({ item }) => (
                 <View key={item.id != null ? item.id.toString() : Math.random().toString()} style={{ marginBottom: 15, flexDirection: 'row'}}>
-                <View style={styles.container}>
-                    <Image
-                        source={require('../assets/images/test.jpg')} // Remplacez cela par le chemin de votre image
-                        style={styles.circleImage} />
-                </View>
-                <View style={{flex: 1, flexDirection: 'column', marginLeft: 5}}>
-                    <Text style={{color: 'black', fontWeight: 'bold'}}>{item.client}</Text>
-                    <Text style={{color: 'black'}}>{item.commentaire}</Text>
-                </View>
+                  <View style={styles.container}>
+                      <Image
+                          source={{uri: item.icone}} // Remplacez cela par le chemin de votre image
+                          style={styles.circleImage} />
+                  </View>
+                  <View style={{flex: 1, flexDirection: 'column', marginLeft: 5}}>
+                      <Text style={{color: 'black', fontWeight: 'bold'}}>{item.client}</Text>
+                      <Text style={{color: 'black'}}>{item.commentaire}</Text>
+                  </View>
                 </View>
             )}
             />

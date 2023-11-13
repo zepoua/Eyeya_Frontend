@@ -1,56 +1,131 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, TextInput, ScrollView, Text, Image, StyleSheet, TouchableHighlight } from 'react-native';
+import { View, TextInput, FlatList, Text, Image, StyleSheet, TouchableHighlight, ActivityIndicator } from 'react-native';
+import StarRating from 'react-native-star-rating';
+import apiConfig from '../services/config';
 import { useFocusEffect } from '@react-navigation/native';
-import StarRating from 'react-native-star-rating'; // Vous pouvez utiliser une bibliothèque pour les étoiles
+import Geolocation from '@react-native-community/geolocation';
 
-
-const Recherche = ({navigation}) => {
+const Recherche = ({route, navigation}) => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [searchText, setSearchText] = useState('');
-
-  useEffect(() => {
-    // Chargez la liste initiale des professionnels au montage de la page
-    fetch('http://192.168.1.242:8000/api/user')
-      .then(response => response.json())
-      .then(initialData => {
-        setData(initialData);
-        setFilteredData(initialData);
-      })
-      .catch(error => console.error('Erreur lors de la récupération des données :', error));
-      
-  }, []);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [loading, setLoading] = useState(true); // Ajout de l'état loading
+  
 
   useFocusEffect(
-    useCallback(() => {
-      setSearchText('');
-      setFilteredData(data);
-    }, [data])
+    React.useCallback(() => {
+      const apiUrl = `${apiConfig.apiUrl}/index_global`;
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(initialData => {
+          setData(initialData);
+          setFilteredData(initialData);
+        })
+        .catch(error => console.error('Erreur lors de la récupération des données :', error))
+        .finally(() => setLoading(false));
+    }, [])
   );
 
+  
   const handleSearch = (text) => {
     setSearchText(text);
 
-    // Effectuez une requête à votre API pour obtenir les données filtrées
     if (text.trim() === '') {
-      // Si le champ de recherche est vide, affichez les données initiales
       setFilteredData(data);
     } else {
       try {
-        const apiUrl = `http://192.168.1.242:8000/api/search?search=${searchText}`;
+        const apiUrl = `${apiConfig.apiUrl}/global_search?search=${searchText}`;
         fetch(apiUrl)
-        .then(response => response.json())
-        .then(filtered => setFilteredData(filtered))
+          .then(response => response.json())
+          .then(filtered => setFilteredData(filtered))
+          .catch(error => {
+            console.error('Erreur lors de la requête API :', error);
+          });
       } catch (error) {
         console.log('Erreur lors de la requête API :', error);
       }
-      // Sinon, effectuez une recherche
-      }
+    }
   };
+  
+  const details = async (professionalId) =>{ 
 
-  const details = (professionalId) =>{ 
-    navigation.navigate('Details', { professionalId });
+    try {
+      //console.log('Avant getCurrentPosition');
+      const position = await new Promise((resolve, reject) => {
+        Geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+        );
+      });
+  
+      //console.log('Position récupérée:', position);
+      const { latitude, longitude } = position.coords;
+      setCurrentLocation({ latitude, longitude });
+  
+      //console.log('currentLocation mis à jour:', currentLocation);
+  
+      const domaine_data = [{ latitude, longitude }, professionalId];
+      //console.log(domaine_data)
+      navigation.navigate('Details', { domaine_data });
+    } catch (error) {
+      console.log('Erreur:', error.message);
+      // Gérer l'erreur, par exemple afficher un message à l'utilisateur
+    }
+
   }
+
+  const renderProfessionalItem = ({ item }) => (
+    
+      <View style={styles.profsContainer}>
+        <TouchableHighlight
+          onPress={() => details(item.id)}
+          activeOpacity={0.8}
+          underlayColor="#EFF7F6E5"
+          style={styles.touchableHighlight}
+        >
+          <View style={styles.profs}>
+            <Image
+              source={{ uri: item.image1 }}
+              style={{
+                width: '100%',
+                height: 150,
+                borderTopLeftRadius: 15,
+                borderTopRightRadius: 15,
+              }}
+            />
+            <View style={{ flex: 1, alignItems: 'center', marginTop: -60 }}>
+              <Image
+                source={{ uri: item.image2 }}
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  borderColor: '#053D37E5',
+                  borderWidth: 1
+                }}
+              />
+            </View>
+            <View style={styles.text_view}>
+              <Text style={styles.text}>{`${item.nom} ${item.prenom}`}</Text>
+              <Text style={styles.text}>{`${item.nom_entreprise}`}</Text>
+              <Text style={styles.text}>{item.domaine?.domaine_lib ?? item.domaine_lib}</Text>
+              <View style={{ marginTop: 20, marginBottom: 10 }}>
+                <StarRating
+                  disabled
+                  starSize={23}
+                  maxStars={5}
+                  rating={parseFloat(item.moyenne_notations)}
+                  fullStarColor={'#FDE03A'}
+                  halfStarColor={'#F59C17'}
+                />            
+              </View>
+            </View>
+          </View>
+        </TouchableHighlight>
+      </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -64,69 +139,44 @@ const Recherche = ({navigation}) => {
             padding: 5,
             borderRadius: 18,
           }}
-          placeholder="Rechercher..."
+          placeholder={'Rechercher...'}
           onChangeText={handleSearch}
           value={searchText}
+          editable={true}
         />
       </View>
-  
-      <ScrollView>
-        {searchText.trim() !== '' && filteredData.length === 0 ? (
-          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 250,}}>
-            <Text style={{textAlign:'center', fontWeight:'bold', fontSize: 18}}>Aucun résultat trouvé</Text>
-            <Image source={require('../assets/images/search.png')} style={{ width: 100, height: 100 }} />
-          </View>
-        ) : (
-          <View style={styles.gridContainer}>
-            {filteredData.map((professional, index) => (
-              <View key={index} style={styles.profsContainer}>
-                <TouchableHighlight
-                  key={`TouchableHighlight-${index}`}
-                  onPress={() => details(professional.id)}
-                  activeOpacity={0.8}
-                  underlayColor="#EFF7F6E5"
-                  style={styles.touchableHighlight}
-                >
-                 <View style={styles.profs}>
-                  <Image
-                    source={require('../assets/images/test2.jpg')}
-                    style={{
-                      width: '100%',
-                      height: 100,
-                      borderTopLeftRadius: 15,
-                      borderTopRightRadius: 15,
-                    }}
-                  />
-                  <View style={{ flex: 1, alignItems: 'center', marginTop: -60 }}>
-                    <Image
-                      source={require('../assets/images/test.jpg')}
-                      style={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: 50,
-                      }}
-                    />
-                  </View>
-                  <View style={styles.text_view}>
-                    <Text style={styles.text}>{`${professional.nom} ${professional.prenom}`}</Text>
-                    <Text style={styles.text}>{`${professional.nom_entreprise}`}</Text>
-                    <Text style={styles.text}>{professional.domaine?.domaine_lib ?? professional.domaine_lib}</Text>
-                    <StarRating
-                      disabled
-                      starSize={23}
-                      maxStars={5}
-                      rating={professional.moyenne_notations}
-                      fullStarColor={'#FDE03A'}
-                      halfStarColor={'#494112'}/>   
-                  </View>
-                </View>
-                </TouchableHighlight>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
 
+      {searchText.trim() !== '' && filteredData.length === 0 ? (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 250,
+          }}
+        >
+          <Text style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 18 }}>
+            Aucun résultat trouvé
+          </Text>
+          <Image
+            source={require('../assets/images/search.png')}
+            style={{ width: 100, height: 100 }}
+          />
+        </View>
+      ) : loading ? ( // Utiliser l'état loading pour afficher un indicateur de chargement
+      <View style={{flex:1, justifyContent: 'center', alignItems:'center'}}>
+        <ActivityIndicator size="large" color="#288A10" style={{ marginTop: 20 }} />
+      </View>
+  ) : (
+    <View style={{ left:3 }}>
+      <FlatList
+        data={filteredData}
+        renderItem={renderProfessionalItem}
+        keyExtractor={(item, index) => index.toString()}
+        numColumns={2}
+      />
+    </View>
+  )}
     </View>
   );
   
@@ -136,24 +186,23 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: '#F4F7D6', // Couleur de fond
-  },
-  profsContainer: {
-    flexDirection: 'row', 
-    margin: 10,// Change to 'column' if you want professionals displayed vertically
-    justifyContent: 'space-between'
-  },
-  container1: {
-    flex: 1,
+    backgroundColor: '#FFFFFF', // Couleur de fond
   },
 
+  profsContainer: {
+    width: '48%',
+    marginLeft : 3,
+    marginRight:3, 
+    marginTop:3,
+    marginBottom:7
+  },
+  
   profs:{
-    borderWidth: 0.5,
+    borderWidth: 2,
     borderRadius: 15,
     borderColor: 'gray',
-    height: 280,
-    width:'100%',
-    backgroundColor: 'white'
+    height: 300,
+    backgroundColor: 'white',
   },
   text_view:{
     flex: 1,
@@ -166,12 +215,10 @@ const styles = StyleSheet.create({
 
   text:{
     fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 15,
     color: '#062153',
     textAlign: 'center',
-  },
-  touchableHighlight: {
-    width:'48%'
+    marginTop: 15
   },
   
   gridContainer: {
@@ -179,11 +226,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-  },
-
-  profsContainer: {
-    width: '48%', // 48% pour que deux éléments tiennent sur une ligne
-    marginBottom: 10,
   },
 
   touchableHighlight: {

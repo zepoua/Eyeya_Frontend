@@ -1,101 +1,202 @@
-import { StyleSheet, Text, View, Image, ScrollView, TouchableHighlight } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import StarRating from 'react-native-star-rating'; // Vous pouvez utiliser une bibliothèque pour les étoiles
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, TextInput, ActivityIndicator, Text, Image, StyleSheet, TouchableHighlight, FlatList } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import apiConfig from '../services/config';
+import Geolocation from '@react-native-community/geolocation';
+import { Dimensions } from 'react-native';
+
 
 const Home = ({navigation}) => {
-  
-  const [professionals, setProfessionals] = useState([]);
-  // État pour stocker la valeur sélectionnée dans la liste déroulante
-//const [selectedDomaine, setSelectedDomaine] = useState('');
+  const [domaine, setdomaine] = useState([]);
+  const [filteredDomaine, setFilteredDomaine] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [loading, setLoading] = useState(true); // Ajout de l'état loading
 
-  // Effectuez une requête fetch pour obtenir les données des domaines
-useEffect(() => {
-    // Remplacez cette URL par l'URL de votre API qui fournit les données des domaines
-    const apiUrl = 'http://192.168.1.242:8000/api/user';
+  //const screenWidth = Dimensions.get('window').width;
+  //const itemWidth = (screenWidth - 30) / 2; // 30 est la somme des marges et espaces
 
+  useFocusEffect(
+    React.useCallback(() => {
+      const apiUrl = `${apiConfig.apiUrl}/domaine`;
     fetch(apiUrl)
-      .then((response) => response.json())
-      .then((data) => {
-        setProfessionals(data);
-    })
-    .catch((error) => {
-        console.error('Erreur lors de la requête DE USER :', error);
-    });
-}, []);
+      .then(response => response.json())
+      .then(initialData => {
+        setdomaine(initialData);
+        setFilteredDomaine(initialData);
+      })
+      .catch(error => console.error('Erreur lors de la récupération des données :', error))
+      .finally(() => setLoading(false));
+    }, [])
+  );
+  
+  const handleSearch = (text) => {
+    setSearchText(text);
 
-const details = (professionalId) =>{ 
-  navigation.navigate('Details', { professionalId });
-}
+    // Effectuez une requête à votre API pour obtenir les données filtrées
+    if (text.trim() === '') {
+      // Si le champ de recherche est vide, affichez les données initiales
+      setFilteredDomaine(domaine);
+    } else {
+      try {
+        const apiUrl = `${apiConfig.apiUrl}/search_domaine?search=${searchText}`;
+        fetch(apiUrl)
+        .then(response => response.json())
+        .then(filtered => setFilteredDomaine(filtered))
+      } catch (error) {
+        console.log('Erreur lors de la requête API :', error);
+      }
+      // Sinon, effectuez une recherche
+      }
+  };
+
+  const recherche = async (domaine_id) => {
+    try {
+      //console.log('Avant getCurrentPosition');
+      const position = await new Promise((resolve, reject) => {
+        Geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+        );
+      });
+  
+      //console.log('Position récupérée:', position);
+      const { latitude, longitude } = position.coords;
+      setCurrentLocation({ latitude, longitude });
+  
+      //console.log('currentLocation mis à jour:', currentLocation);
+  
+      const domaine_data = [{ latitude, longitude }, domaine_id];
+      //console.log(domaine_data)
+      navigation.navigate('UserParDomaine', { domaine_data });
+    } catch (error) {
+      console.log('Erreur:', error.message);
+      // Gérer l'erreur, par exemple afficher un message à l'utilisateur
+    }
+  };
+  
+  
+  const renderItem = ({ item }) => {
+    return(
+    <View style={styles.profsContainer}>
+            <TouchableHighlight
+              onPress={() => recherche(item.id)}
+              activeOpacity={0.8}
+              underlayColor="#EFF7F6E5">
+              <View style={styles.domaines}>
+                <View>
+                  <Image source={require('../assets/images/test1.jpeg')} style={styles.circleImage} />
+                </View>
+                <View style={styles.text_view}>
+                  <Text style={styles.text}>{`${item.domaine_lib}`}</Text>
+                  <Text style={styles.text2}>{`${item.nombre_users}`} Professionnels   </Text>
+                </View>
+              </View>
+            </TouchableHighlight>
+          </View>
+    );
+          
+  };
 
   return (
     <View style={styles.container}>
-        <ScrollView>
-          {professionals.map((professional, index) => (
-          <TouchableHighlight 
-            key={index}
-            onPress={() => details(professional.id)}
-            activeOpacity={0.8} 
-            underlayColor='#EFF7F6E5'>
-            <View key={index} style={styles.profs}>
-            <Image source={require('../assets/images/test1.jpeg')} style={{ width: 360, height: 200,  borderTopLeftRadius: 15,
-                      borderTopRightRadius: 15,}} />
-            <View style={styles.text_view}>
-              <View>
-                <Text style={styles.text}>{`${professional.nom} ${professional.prenom}`}</Text>
-                <Text style={styles.text}>{`${professional.domaine.domaine_lib}`}</Text>
-              </View>
-              <View>
-                <Text style={styles.text}>{`${professional.nom_entreprise}`}</Text>
-                <StarRating
-                  disabled
-                  starSize={23}
-                  maxStars={5}
-                  rating={professional.moyenne_notations}
-                  fullStarColor={'#FDE03A'}
-                  halfStarColor={'#494112'}/>             
-              </View>
+      <View>
+        <TextInput
+          style={{height: 40, borderColor: '#9B1126', borderWidth: 2, margin: 10, padding: 5, borderRadius: 18,}}
+          placeholder="Rechercher..."
+          onChangeText={handleSearch}
+          value={searchText}/>
+      </View>
+
+      {loading ? (
+        <View style={{ justifyContent: 'center', alignItems: 'center'}}>
+          <ActivityIndicator size="large" color="#288A10" style={{ marginTop: 20 }} />
+        </View>
+      ) : (
+        <View style={{alignItems: 'flex-start'}}>
+          {searchText.trim() !== '' && filteredDomaine.length === 0 ? (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginTop: 250,
+              }}>
+              <Text style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 18 }}>
+                Aucun résultat trouvé
+              </Text>
+              <Image source={require('../assets/images/search.png')} style={{ width: 100, height: 100 }} />
             </View>
-          </View>
-        </TouchableHighlight>
-      ))}
-    </ScrollView>
-  </View>
+          ) : (
+            <FlatList
+              data={filteredDomaine}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={2}
+            />
+          )}
+        </View>
+      )}
+    </View>
   );
 };
-
-export default Home;
 
 const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F4F7D6', // Couleur de fond
+    backgroundColor: '#FFFFFF', // Couleur de fond
   },
 
-  profs:{
-    margin: 15,
-    borderWidth: 0.5,
-    borderColor: 'gray',
-    borderRadius: 15,
-    backgroundColor: 'white'
+/**
+ *  borderRadius: 50,
+    margin: 5,
+    width: itemWidth, // Largeur dynamique
+    backgroundColor: 'white',
+    shadowColor: '#DABB0B',
+    shadowOffset: { width: 2, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 10, */  
 
+  profsContainer: {
+    borderRadius: 50,
+    margin: 10,
+    backgroundColor:'white',
+    shadowColor: '#DABB0B',
+    shadowOffset: { width: 2, height: 5 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+
+  domaines:{
+    flexDirection: 'row',
   },
   text_view:{
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    margin: 5,
-    height: 60,
+    flexDirection: 'column',
+    marginLeft:5,
   },
-  
-  text:{
+
+  text: {
+    color: '#130758',
     fontWeight: 'bold',
     fontSize: 17,
-    color: '#062153',
-    textAlign: 'center',
-    marginBottom: 10
-  }
+    flexWrap: 'nowrap', // Empêche le texte de passer à la ligne
+  },
+  text2: {
+    color: 'black',
+    fontWeight: 'bold',
+    fontSize: 15,
+    flexWrap: 'nowrap', // Empêche le texte de passer à la ligne
+  },
+  
+  circleImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 50,
+  },
+
 });
+export default Home;

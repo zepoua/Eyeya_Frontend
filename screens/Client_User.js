@@ -1,29 +1,31 @@
-import { View, Text, ScrollView, TouchableHighlight, TextInput, StyleSheet, Button } from 'react-native'
+import { View, Text, ScrollView, TextInput, StyleSheet, TouchableHighlight } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { Picker } from '@react-native-picker/picker';
 import { Alert } from 'react-native-windows';
 import * as ImagePicker from 'react-native-image-picker';
 import apiConfig from '../services/config';
 import Geolocation from '@react-native-community/geolocation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-const CreateUser = ({navigation}) => {
+const Client_User = ({route, navigation}) => {
 
+    const clientData = route.params.clientData;
+    const [Images1, setImages1] = useState('');
+    const [Images2, setImages2] = useState('');
+    const [Images3, setImages3] = useState('');
+    const [currentLocation, setCurrentLocation] = useState(null);
     const [formData, setFormData] = useState({
-        nom: '',
-        prenom: '',
         nom_entreprise:'',
-        email: '',
         password: '',
         adresse: '',
-        telephone1: '',
         telephone2: '',
         qualification: '',
         experience: '',
         description: '',});
-    const [currentLocation, setCurrentLocation] = useState(null);
 
     const [domaines, setDomaines] = useState([]);
+      // État pour stocker la valeur sélectionnée dans la liste déroulante
     const [selectedDomaine, setSelectedDomaine] = useState('');
     
       // Effectuez une requête fetch pour obtenir les données des domaines
@@ -46,11 +48,7 @@ const CreateUser = ({navigation}) => {
           ...formData,
           [fieldName]: text,
         });
-    };
-
-    const [Images1, setImages1] = useState('');
-    const [Images2, setImages2] = useState('');
-    const [Images3, setImages3] = useState('');      
+    };      
 
     const selectImage = (index) => {
         ImagePicker.launchImageLibrary(
@@ -107,17 +105,16 @@ const CreateUser = ({navigation}) => {
     };
 
     const handleSubmit = () => {
-       
         const formDataToSend = {
             nom_entreprise: formData.nom_entreprise,
-            nom: formData.nom,
-            prenom: formData.prenom,
-            email: formData.email,
+            nom: clientData.nom,
+            prenom: clientData.prenom,
+            email: clientData.email,
             password: formData.password,
             adresse: formData.adresse,
             latitude: currentLocation.latitude,
             longitude: currentLocation.longitude,
-            telephone1: formData.telephone1,
+            telephone1: clientData.telephone,
             telephone2: formData.telephone2,
             qualification: formData.qualification,
             experience: formData.experience,
@@ -127,7 +124,7 @@ const CreateUser = ({navigation}) => {
             image3: Images3,
             domaine_id: selectedDomaine,
           };
-          const apiUrl = `${apiConfig.apiUrl}/code_user`;
+          const apiUrl = `${apiConfig.apiUrl}/client_user`;
           const requestOptions = {
             method: 'POST',
             headers: {
@@ -141,9 +138,29 @@ const CreateUser = ({navigation}) => {
             .then((response) => response.json())
             .then((data) => {
                 if (data.status == 'success'){
-                    console.log(data);
+                    const id = clientData.id;
+                    const dataToStoreLocally ={
+                        id,
+                        ...formDataToSend, };
+
                     Alert.alert(data.message);
-                    navigation.navigate('ConfirmationUser', { formDataToSend });
+                    try {
+                            AsyncStorage.removeItem('formDataToSend');
+                            console.log('Données supprimées avec succès.');
+                            try{
+                                AsyncStorage.setItem('formDataToSend', JSON.stringify(dataToStoreLocally))
+                                    .then(() => {
+                                        console.log('Données stockées localement');
+                                    });
+                                    navigation.navigate('MonCompte');
+                                }catch(error){
+                                    console.error('Erreur lors du stockage local :', error);
+                                }  
+                            navigation.navigate('Home',{ screen: 'MonCompte' });
+                      } catch (error) {
+                        console.error('Erreur lors de la suppression des données :', error);
+                      }
+                  
                     setFormData ({
                         nom: '',
                         prenom: '',
@@ -151,6 +168,7 @@ const CreateUser = ({navigation}) => {
                         email: '',
                         password: '',
                         adresse: '',
+                        position: '',
                         telephone1: '',
                         telephone2: '',
                         qualification: '',
@@ -161,7 +179,7 @@ const CreateUser = ({navigation}) => {
                         setImages1('')
                         setImages2('')      
                         setImages3('')
-                        setCurrentLocation(null)      
+                        setCurrentLocation(null)  
                 }else{
                     Alert.alert(data.message);
                 }
@@ -170,16 +188,12 @@ const CreateUser = ({navigation}) => {
               console.error('Erreur :', error);
             });
     };
+
     const handleReset = () => {
         setFormData ({
-            nom: '',
-            prenom: '',
             nom_entreprise:'',
-            email: '',
             password: '',
             adresse: '',
-            position: '',
-            telephone1: '',
             telephone2: '',
             qualification: '',
             experience: '',
@@ -189,17 +203,16 @@ const CreateUser = ({navigation}) => {
             setImages1('')
             setImages2('')      
             setImages3('')
-            setCurrentLocation(null)             
+            setCurrentLocation(null)       
     }
 
- 
     return (
         <View style={styles.Container}>
 
             <ScrollView>
 
                 <Text style={styles.titre}>
-                    Inscription Professionnel
+                    Compte Professionnel
                 </Text >
 
                 <Text style={styles.libelle}>
@@ -209,8 +222,8 @@ const CreateUser = ({navigation}) => {
                     placeholder='Entrez votre nom' 
                     inputMode='text' 
                     style={styles.input}
-                    value={formData.nom}
-                    onChangeText={(text) => handleFieldChange('nom', text)}/>
+                    value={clientData.nom}
+                    editable={false}/>
 
                 <Text style={styles.libelle}>
                     Prenom
@@ -219,8 +232,8 @@ const CreateUser = ({navigation}) => {
                     placeholder='Entrez votre Prenom' 
                     inputMode='text' 
                     style={styles.input}
-                    value={formData.prenom}
-                    onChangeText={(text) => handleFieldChange('prenom', text)}/>                
+                    value={clientData.prenom}
+                    editable={false} />                
                     
                 <Text style={styles.libelle}>
                     Nom de l'entreprise
@@ -239,8 +252,8 @@ const CreateUser = ({navigation}) => {
                     placeholder='Votre Adresse mail' 
                     inputMode='email' 
                     style={styles.input}
-                    value={formData.email}
-                    onChangeText={(text) => handleFieldChange('email', text)}/>
+                    value={clientData.email}
+                    editable={false} />
 
                 <Text style={styles.libelle}>
                     Mot de passe
@@ -266,10 +279,10 @@ const CreateUser = ({navigation}) => {
                     Geolocalisation
                 </Text>
                 <TouchableHighlight 
-                    onPress={position}
-                    style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:15, justifyContent:'center', alignItems:'center', top:15, marginBottom:20}}>
-                    <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
-                </TouchableHighlight>
+                onPress={position}
+                style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:15, justifyContent:'center', alignItems:'center', top:15, marginBottom:20}}>
+                <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
+              </TouchableHighlight>
 
                 <Text style={styles.libelle}>
                     Telephone 1
@@ -278,8 +291,8 @@ const CreateUser = ({navigation}) => {
                     placeholder='Numero de telephone' 
                     inputMode='tel' 
                     style={styles.input}
-                    value={formData.telephone1}
-                    onChangeText={(text) => handleFieldChange('telephone1', text)}/>
+                    value={clientData.telephone}
+                    editable={false} />
 
                 <Text style={styles.libelle}>
                     Telephone 2
@@ -342,26 +355,43 @@ const CreateUser = ({navigation}) => {
                 <Text style={styles.libelle}>
                     Photo de Profil
                 </Text>
-                <View style={{width: 250, borderRadius: 20}}>
-                    <Button title="Sélectionner une photo" onPress={() => selectImage(0)} />
-                </View>
+                <TouchableHighlight 
+                onPress={() => selectImage(0)}               
+                style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:15, justifyContent:'center', alignItems:'center', top:15, marginBottom:20}}>
+                <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
+                </TouchableHighlight>
+
                 <Text style={styles.libelle}>
-                    Photo de Couverture 
+                    Photo de Couverture
                 </Text>
-                <View style={{width: 250, borderRadius: 20}}>
-                    <Button title="Sélectionner une photo" onPress={() => selectImage(1)} />
-                </View>
+                <TouchableHighlight 
+                onPress={() => selectImage(1)}
+                style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:15, justifyContent:'center', alignItems:'center', top:15, marginBottom:20}}>
+                <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
+                </TouchableHighlight>
+
                 <Text style={styles.libelle}>
-                    Autre Photo (optionnel)
+                    Autre Photo
                 </Text>
-                <View style={{width: 250, borderRadius: 20}}>
-                    <Button title="Sélectionner une photo" onPress={() => selectImage(2)} />
-                </View>
-                <View style={styles.fixToText}>
-                <Button title="Enregistrer" color= "green" onPress={handleSubmit}/>
-                <Button title="Annuler" color= "red" onPress={handleReset}/>
-                </View>
-            </ScrollView>
+                <TouchableHighlight 
+                onPress={() => selectImage(2)}
+                style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:15, justifyContent:'center', alignItems:'center', top:15, marginBottom:20}}>
+                <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
+                </TouchableHighlight>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-start', top:30, marginBottom:50}}>
+                <TouchableHighlight 
+                  onPress={handleSubmit}
+                  style={{backgroundColor:'#37CE37', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
+                  <Text style={{ color:'white', fontSize:18}}>Enregistrer</Text>
+                </TouchableHighlight>
+                <TouchableHighlight 
+                  onPress={handleReset}
+                  style={{backgroundColor:'#810A0A', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
+                  <Text style={{ color:'white', fontSize:18}}>Annuler</Text>
+                </TouchableHighlight>
+              </View>
+        </ScrollView>
         </View>
     
       );
@@ -380,7 +410,7 @@ const styles = StyleSheet.create({
       marginBottom: 6,
     },
     titre: {
-      fontSize: 40,
+      fontSize: 32,
       fontFamily: 'algerian',
       fontWeight: 'bold',
       color:'darkblue',
@@ -393,12 +423,11 @@ const styles = StyleSheet.create({
       width : 350,
       borderRadius: 6,
       borderBottomWidth:1,
-    },
-    fixToText: {
-      flexDirection: 'row',
-      justifyContent: 'space-evenly',
-      margin: 20,
-    },
+      borderColor:'gray',
+      color:'black',
+
+      },
+    
   });
 
-export default CreateUser
+export default Client_User

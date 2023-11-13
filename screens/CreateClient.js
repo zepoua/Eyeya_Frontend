@@ -2,7 +2,8 @@ import { View, Text, ScrollView, TextInput, StyleSheet, Button, TouchableHighlig
 import React from 'react'
 import { useState } from 'react';
 import { Alert } from 'react-native-windows';
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as ImagePicker from 'react-native-image-picker';
+import apiConfig from '../services/config';
 
 
 const CreateClient = ({navigation}) => {
@@ -14,6 +15,8 @@ const CreateClient = ({navigation}) => {
       telephone: '',
     });
 
+    const [Image, setImage] = useState('');
+
     const handleFieldChange = (fieldName, text) => {
       setFormData({
         ...formData,
@@ -21,15 +24,38 @@ const CreateClient = ({navigation}) => {
       });
     };
 
+    const selectImage = () => {
+      ImagePicker.launchImageLibrary(
+          {
+              title: 'Sélectionnez une image',
+              storageOptions: {
+                  skipBackup: true,
+                  path: '',
+              },
+          },
+          (response) => {
+              if (response.didCancel) {
+                  console.log('Annulé');
+              } else if (response.error) {
+                  console.error('Erreur :', response.error);
+              } else {
+                  setImage(response.assets[0].uri);
+                  console.log(Image)
+              }
+          }
+      );
+  };
+
     const handleSubmit = () => {
       const formDataToSend = {
         nom: formData.nom,
         prenom: formData.prenom,
         email: formData.email,
         telephone: formData.telephone,
+        icone: Image,
       };
-    
-      const apiUrl = 'http://192.168.1.242:8000/api/client';
+
+      const apiUrl = `${apiConfig.apiUrl}/code_client`;
       const requestOptions = {
         method: 'POST',
         headers: {
@@ -42,22 +68,9 @@ const CreateClient = ({navigation}) => {
       fetch(apiUrl, requestOptions)
         .then((response) => response.json())
         .then((data) => {
-          const id = data.client_id;
-          const dataToStoreLocally ={
-            id,
-            ...formDataToSend,
-          }
+          console.log(data.message);
           if (data.status == 'success') {
-            Alert.alert(data.message);
-            try{
-              AsyncStorage.setItem('formDataToSend', JSON.stringify(dataToStoreLocally))
-                  .then(() => {
-                      console.log('Données stockées localement');
-                  });
-                  navigation.navigate('Home');
-            }catch(error){
-                console.error('Erreur lors du stockage local :', error);
-            }  
+            navigation.navigate('ConfirmationClient', { formDataToSend });
             setFormData ({
               nom: '',
               prenom: '',
@@ -65,7 +78,7 @@ const CreateClient = ({navigation}) => {
               telephone: '',
             })
           } else {
-            Alert.alert(data);
+            Alert.alert(data.message);
         }
         }).catch((error) => {
           console.error('Erreur :', error.message);
@@ -130,11 +143,27 @@ const CreateClient = ({navigation}) => {
                     style={styles.input}
                     value={formData.tel}
                     onChangeText={(text) => handleFieldChange('telephone', text)}/>
+                <Text style={styles.libelle}>
+                    Photo de Profil
+                </Text>
+                <TouchableHighlight 
+                onPress={() => selectImage()}
+                style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:15, justifyContent:'center', alignItems:'center', top:15, marginBottom:20}}>
+                <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
+              </TouchableHighlight>
             
-            <View style={styles.button}>
-              <Button title="Enregistrer" color= "green" onPress={handleSubmit}/>
-              <Button title="Annuler" color= "red" onPress={handleReset}/>
-            </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-start', top:30, marginBottom:50}}>
+                <TouchableHighlight 
+                  onPress={() => handleSubmit()}
+                  style={{backgroundColor:'#37CE37', height:40, width:'48%', borderRadius:15, justifyContent:'center', alignItems:'center', margin:3}}>
+                  <Text style={{ color:'white', fontSize:18}}>Enregistrer</Text>
+                </TouchableHighlight>
+                <TouchableHighlight 
+                  onPress={() => handleReset()}
+                  style={{backgroundColor:'#810A0A', height:40, width:'48%', borderRadius:15, justifyContent:'center', alignItems:'center', margin:3}}>
+                  <Text style={{ color:'white', fontSize:18}}>Annuler</Text>
+                </TouchableHighlight>
+              </View>
         </ScrollView>
         <View style={{flexDirection: 'row', justifyContent: 'center', marginBottom: 50}}>
           <Text style={{textAlign:'center', fontWeight: 'bold'}}>
