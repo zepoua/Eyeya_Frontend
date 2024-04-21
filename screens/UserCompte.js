@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableHighlight, Image, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, Modal, TouchableHighlight, Image, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiConfig from '../services/config';
-import { Alert } from 'react-native-windows';
 import * as ImagePicker from 'react-native-image-picker';
 import Swiper from 'react-native-swiper';
 import { Picker } from '@react-native-picker/picker';
 import StarRating from 'react-native-star-rating';
-import { useFocusEffect } from '@react-navigation/native';
+import Geolocation from '@react-native-community/geolocation';
+import CustomModal from './test';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Dimensions } from 'react-native';
 
 const UserCompte = ({navigation}) => {
 
@@ -15,7 +18,14 @@ const UserCompte = ({navigation}) => {
   const [editedData, setEditedData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [domaines, setDomaines] = useState([]);
-  const [rating, setRating] = useState({});
+  const [rating, setRating] = useState();
+  const [vues, setVues] = useState();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const screenHeight = Dimensions.get('window').height;
+
   
   useEffect(() => {
     const fetchData = async () => {
@@ -23,96 +33,92 @@ const UserCompte = ({navigation}) => {
         const storedData = await AsyncStorage.getItem('formDataToSend');
         if (storedData !== null) {
           const parsedData = JSON.parse(storedData);
-          setClientData(parsedData);
           setEditedData(parsedData);
-          
+          setClientData(parsedData);
           const apiUrl1 = `${apiConfig.apiUrl}/notation/${parsedData.user_id}`;
           fetch(apiUrl1)
             .then((response) => response.json())
             .then((data) => {
               setRating(data.moyenne_notations);
+              setVues(data.vues);
             })
             .catch((error) => {
-              console.error('Erreur lors de la requête1 :', error);
             });
   
-          const apiUrl = `${apiConfig.apiUrl}/domaine`;
+          const apiUrl = `${apiConfig.apiUrl}/liste_domaines`;
           fetch(apiUrl)
             .then((response) => response.json())
             .then((data) => {
               setDomaines(data);
             })
             .catch((error) => {
-              console.error('Erreur lors de la requête2 :', error);
             });
+            setDataLoaded(true)
         }
       } catch (error) {
-        console.error('Erreur lors de la récupération des données :', error);
       }
     };  
     fetchData();
   }, []);
   
-  
-
   const images = [];
-    if (editedData.image2 !== null) {
-      images.push(editedData.image2);
-    }
-    if (editedData.image3) {
-      images.push(editedData.image3);
-    }else{
-      images.push(editedData.image1);
-    }
+  if (editedData.image2) {
+    images.push(editedData.image2.fileName);
+  }
+  if (editedData.image3 && editedData.image3.fileName) {
+    images.push(editedData.image3.fileName);
+  } else if(editedData.image1) {
+    images.push(editedData.image1.fileName);
+  }
 
-  const handleEdit = async () => {
+  const handleEdit =  () => {
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
+    setError('')
     setEditedData(clientData);
   };
 
-  const handleChoosePhoto = (index) => {
+  const selectImage = (index) => {
     ImagePicker.launchImageLibrary(
-        {
-            title: 'Sélectionnez une image',
-            storageOptions: {
-                skipBackup: true,
-                path: 'images',
-            },
+      {
+        title: 'Sélectionnez une image',
+        storageOptions: {
+          skipBackup: true,
+          path: '',
         },
-        (response) => {
-            if (response.didCancel) {
-                console.log('Annulé');
-            } else if (response.error) {
-                console.error('Erreur :', response.error);
-            } else {
-                switch (index) {
-                    case 0:
-                      const updatedData1 = { ...editedData, image1: response.assets[0].uri };
-                      setEditedData(updatedData1);                        
-                      break;
-                    case 1:
-                      const updatedData2 = { ...editedData, image2: response.assets[0].uri };
-                      setEditedData(updatedData2);                        
-                      break;
-                    case 2:
-                      const updatedData3 = { ...editedData, image3: response.assets[0].uri };
-                      setEditedData(updatedData3);                        
-                      break;
-                    default:
-                        break;
-                }
-            }
+      },
+      (response) => {
+        if (response.didCancel) {
+        } else if (response.error) {
+        } else {
+          const { uri, fileName, type } = response.assets[0];
+          let updatedData = { ...editedData }; // Copiez les données éditées actuelles
+  
+          switch (index) {
+            case 0:
+              updatedData = { ...updatedData, image1: { uri, fileName, type } };
+              break;
+            case 1:
+              updatedData = { ...updatedData, image2: { uri, fileName, type } };
+              break;
+            case 2:
+              updatedData = { ...updatedData, image3: { uri, fileName, type } };
+              break;
+            default:
+              break;
+          }
+          setEditedData(updatedData);
         }
+      }
     );
-};
+  };
   
   const position = async () => {
+    setLoading(true);
     try {
-      //console.log('Avant getCurrentPosition');
       const position = await new Promise((resolve, reject) => {
         Geolocation.getCurrentPosition(
           resolve,
@@ -120,78 +126,85 @@ const UserCompte = ({navigation}) => {
           { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
         );
       });
-  
-      //console.log('Position récupérée:', position);
+
       const { latitude, longitude } = position.coords;
-
-    // Mettre à jour les données dans editedData avec latitude et longitude
       setEditedData(prevData => ({
-      ...prevData,
-      latitude: latitude,
-      longitude: longitude,
-    }));
-
-      console.log('currentLocation mis à jour:', currentLocation);
+        ...prevData,
+        latitude: latitude,
+        longitude: longitude,
+      }));
+      setError('Position recuperee avec succes...')
+      setModalVisible(true)
     } catch (error) {
-      console.log('Erreur:', error.message);
-      // Gérer l'erreur, par exemple afficher un message à l'utilisateur
+      setError('Position non recuperee, verifiez votre connexion et reessayer.')
+      setModalVisible(true)
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSave = () => {
-    const formDataToSend = {
-      id:editedData.id,
-      nom_entreprise:editedData.nom_entreprise,
-      nom: editedData.nom,
-      prenom: editedData.prenom,
-      email: editedData.email,
-      password: editedData.password,
-      adresse: editedData.adresse,
-      latitude: editedData.latitude,
-      longitude: editedData.longitude,
-      telephone1: editedData.telephone1,
-      telephone2: editedData.telephone2,
-      qualification: editedData.qualification,
-      experience: editedData.experience,
-      description: editedData.description,
-      image1: editedData.image1,
-      image2: editedData.image2,
-      image3: editedData.image3,
-      domaine_id: editedData.domaine_id,
-    };
-
-    const apiUrl = `${apiConfig.apiUrl}/user/${editedData.user_id}`;
-      const requestOptions = {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formDataToSend),
-      };
-    
-      // Effectuez la requête fetch vers votre API
-      fetch(apiUrl, requestOptions)
-        .then((response) => response.json())
-        .then((data) => {
-          console.log(data.message);
-          if (data.status == 'success') {
-            updateStoredData(editedData);
-            setClientData(editedData);
-            setIsEditing(false);
-          } else {
-            Alert.alert(data.message);
-        }
-        }).catch((error) => {
-          console.error('Erreur :', error.message);
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('user_id', editedData.user_id);
+    formData.append('id', editedData.id);
+    formData.append('nom_entreprise', editedData.nom_entreprise);
+    formData.append('nom', editedData.nom);
+    formData.append('prenom', editedData.prenom);
+    formData.append('email', editedData.email);
+    formData.append('password', editedData.password);
+    formData.append('adresse', editedData.adresse);
+    formData.append('latitude', editedData.latitude);
+    formData.append('longitude', editedData.longitude);
+    formData.append('telephone1', editedData.telephone1);
+    formData.append('telephone2', editedData.telephone2);
+    formData.append('qualification', editedData.qualification);
+    formData.append('experience', editedData.experience);
+    formData.append('description', editedData.description);
+    formData.append('domaine_id', editedData.domaine_id);
+    const Images = ['image1', 'image2', 'image3'];
+    Images.forEach(imageKey => {
+      if (editedData[imageKey] && editedData[imageKey].uri) {
+        formData.append(imageKey, {
+          uri: editedData[imageKey].uri,
+          type: editedData[imageKey].type,
+          name: editedData[imageKey].fileName,
+          //randomParam: Math.random(), // Ajoutez un paramètre aléatoire
         });
-  };
+      }
+    });
+
+    const apiUrl = `${apiConfig.apiUrl}/update_user`;
+    const requestOptions = {
+      method: 'POST',
+      body: formData,
+      headers: {
+          'Content-Type': 'multipart/form-data',
+      },
+    };
+    
+    fetch(apiUrl, requestOptions)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status == 'success') {
+          setError(data.message);
+          setModalVisible(true);
+          updateStoredData(editedData);
+          setClientData(editedData);
+          setIsEditing(false);
+        } else {
+          setError(data.message);
+          setModalVisible(true);        }
+      }).catch((error) => {
+        setError('Verifiez votre connexion')
+        setModalVisible(true)
+      }).finally(() => setLoading(false));
+    };
 
   const updateStoredData = async (data) => {
     try {
       await AsyncStorage.setItem('formDataToSend', JSON.stringify(data));
-      console.log('Données stockées mises à jour avec succès');
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des données stockées :', error);
     }
   };
 
@@ -200,51 +213,57 @@ const UserCompte = ({navigation}) => {
     setEditedData(prevData => ({ ...prevData, [key]: value }));
   };
 
+  const closeModal = () => {
+    setModalVisible(false);
+  };
+
   return (
     <View style={styles.Container}>
-
-        <Text style={styles.titre}>Informations Personnelles</Text>
+      {dataLoaded ? (
         <ScrollView>
           <View style={{flex:1, flexDirection:'column'}}>
-            <View style={{ flex:1, width: '100%', height: 170, alignItems:'center', justifyContent:'center',}}>
-              <Swiper 
-                style={{height: 170, position:'static'}} 
+            <View style={{ flex:1, width: '100%', height:screenHeight/4, alignItems:'center', justifyContent:'center',}}>
+              {images &&(
+                <Swiper 
+                style={{height: '100%', position:'static'}} 
                 showsButtons={true}
                 dotStyle={{ width: 8, height: 8, backgroundColor: '#6C37CE', margin: 3 }}
                 activeDotStyle={{ width: 8, height: 8, backgroundColor: '#FDE03A', margin: 3 }}
               >              
                 {images.map((image, index) => (
-                  <View key={index} style={styles.slide}>
+                  <View key={index}>
                     {image ? (
                       <Image
-                        source={{ uri: image }}
+                        source={{ uri: `${apiConfig.imageUrl}/${image}` }}
                         style={styles.image}
                         resizeMode='contain'
                       />
                     ) : (
                       <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#288A10" />
+                         <ActivityIndicator size="large" color="#3792CE" />
+                        <Text style={{color:'black'}}>chargement...</Text>
                       </View>
                     )}
                   </View>
                 ))}
               </Swiper>
+              )}
             </View>
-            <View style={{left:-50,top:-50,flexDirection: 'row', justifyContent:'center' }}>
+            <View style={{paddingLeft:10, top:-50, flexDirection: 'row', alignItems:'center', width:'100%'}}>
                 {editedData.image1 && (
                   <Image
-                    source={{ uri: editedData.image1 }}
+                    source={{ uri: `${apiConfig.imageUrl}/${editedData.image1.fileName}` }}
                     style={{
-                      width: 100,
                       height: 100,
                       borderRadius: 50,
                       borderColor: '#053D37E5',
                       borderWidth: 1,
+                      width:'25%'
                     }}
                   />
                 )}
-                <View style={{flexDirection:'column', top:40, left:30, justifyContent:'center', alignSelf:'center', }}>
-                  <Text style={{textAlign:'center',  fontSize: 20, fontFamily: 'Cochin', fontWeight: 'bold', color:'black', marginBottom:5 }}>{editedData.nom_entreprise}</Text>
+                <View style={{flexDirection:'column', top:40, justifyContent:'center', alignSelf:'center', width:'45%'}}>
+                  <Text style={{textAlign:'center',  fontSize: 16, fontFamily: 'Cochin', fontWeight: 'bold', color:'black', marginBottom:5 }}>{editedData.nom}</Text>
                     <StarRating
                       disabled
                       starSize={23}
@@ -254,19 +273,24 @@ const UserCompte = ({navigation}) => {
                       halfStarColor={'#F59C17'}
                     /> 
                 </View>
+                <View style={{flexDirection:'column', top:40, justifyContent:'center', alignSelf:'center', width:'30%' }}>
+                  <Text style={{textAlign:'center',  fontSize: 16, fontFamily: 'Cochin', fontWeight: 'bold', color:'black', marginBottom:5 }}>Vues</Text>
+                  <Text style={{textAlign:'center',  fontSize: 16, fontFamily: 'Cochin', fontWeight: 'bold', color:'black', marginBottom:5 }}>{vues}</Text>
+                </View>
             </View>
             <View style={{flexDirection: 'column',top: 0, marginBottom: 15,}}>
 
               <View style={{justifyContent: 'center', alignItems:'center', top:0, marginBottom:15,}}>
                   {!isEditing && (
                   <TouchableHighlight 
-                  onPress={() => handleEdit()}
-                  style={{backgroundColor:'#3792CE', height:40, width:'80%', borderRadius:50, justifyContent:'center', alignItems:'center',}}>
-                    <Text style={{ color:'white', fontSize:18}}>Modifier mon Profil</Text>
+                    activeOpacity={0.8} 
+                    underlayColor='#7698F3'
+                    onPress={() => handleEdit()}
+                    style={{backgroundColor:'#3792CE', height:40, width:'80%', borderRadius:50, justifyContent:'center', alignItems:'center',}}>
+                    <Text style={{ color:'white', fontSize:16}}>Modifier mon Profil</Text>
                   </TouchableHighlight>
                 )}
               </View>
-
               <View style={{left:10,top:20}}>
               <Text style={styles.libelle}>Nom de l'Entreprise</Text>
                 <TextInput
@@ -297,8 +321,8 @@ const UserCompte = ({navigation}) => {
                   <Text style={styles.libelle}>Mot de Passe</Text>
                   <TextInput
                     style={styles.input}
+                    placeholder='Votre nouveau mot de Passe'
                     onChangeText={(text) => handleChangeText('password', text)}
-                    placeholder='votre nouveau de passe'
                     editable={isEditing}/></View>
                 )}
 
@@ -308,107 +332,200 @@ const UserCompte = ({navigation}) => {
                   onChangeText={(text) => handleChangeText('adresse', text)}
                   value={editedData.adresse} editable={isEditing}/>
 
-                <Text style={styles.libelle}>Numero de telephone</Text>
+                <Text style={styles.libelle}>Numéro de téléphone</Text>
                 <TextInput
                   style={styles.input}
+                  inputMode='tel'
                   onChangeText={(text) => handleChangeText('telephone1', text)}
-                  value={editedData.telephone1} editable={isEditing}/>
-
-                <Text style={styles.libelle}>Numero de telephone 2</Text>
-                <TextInput
-                  style={styles.input}
-                  onChangeText={(text) => handleChangeText('telephone2', text)}
-                  value={editedData.telephone2} editable={isEditing}/>
-                
+                  value={String(editedData.telephone1)} // Convertir en chaîne de caractères
+                  editable={isEditing}
+                />
+                {editedData.telephone2 &&(
+                  <View>
+                    <Text style={styles.libelle}>Numéro de téléphone 2</Text>
+                    <TextInput
+                      style={styles.input}
+                      inputMode='tel'
+                      onChangeText={(text) => handleChangeText('telephone2', text)}
+                      value={String(editedData.telephone2)} // Convertir en chaîne de caractères
+                      editable={isEditing}
+                    />
+                  </View>
+                )}
+          
                 <Text style={styles.libelle}>Vos Qualifications</Text>
-                <TextInput
+                {!isEditing ?(
+                  <View style={styles.input}>
+                    <Text style={{color:'black', alignSelf:'flex-start', top:5}}>{editedData.qualification}</Text>
+                  </View>
+                ):(
+                  <TextInput
                   style={styles.input}
                   onChangeText={(text) => handleChangeText('qualification', text)}
-                  value={editedData.qualification} editable={isEditing}/>
-
+                  value={editedData.qualification} editable={isEditing}
+                  multiline={true}/>
+                )}
                 <Text style={styles.libelle}>Vos Experiences</Text>
+                {!isEditing ?(
+                  <View style={styles.input}>
+                    <Text style={{color:'black', alignSelf:'flex-start', top:5}}>{editedData.experience}</Text>
+                  </View>
+                ):(
                 <TextInput
                   style={styles.input}
                   onChangeText={(text) => handleChangeText('experiences', text)}
-                  value={editedData.experience} editable={isEditing}/>
-
+                  value={editedData.experience} editable={isEditing}
+                  multiline={true}/>
+                )}
                 <Text style={styles.libelle}>Description de votre Entreprise</Text>
-                <TextInput
+                {!isEditing ?(
+                  <View style={styles.input}>
+                    <Text style={{color:'black', alignSelf:'flex-start', top:5}}>{editedData.description}</Text>
+                  </View>
+                ):(
+                  <TextInput
                   style={styles.input}
                   onChangeText={(text) => handleChangeText('description', text)}
                   value={editedData.description} editable={isEditing}
                   multiline={true}/>
+                )}
                 
                 {isEditing && (
                   <View>
                     <Text style={styles.libelle}> Domaine d'activite</Text>
-                    <Picker
-                      style={styles.input}
-                      selectedValue={editedData.domaine_id.toString()} // Définir la valeur par défaut
-                      onValueChange={(itemValue, itemIndex) => {
-                        // Mettre à jour editData lors du changement de valeur
-                      setEditedData(prevData => ({
-                      ...prevData,
-                      domaine_id: parseInt(itemValue, 10),}));
-                    }}>
-                      <Picker.Item label="Sélectionnez un domaine" value="" />
-                      {domaines.map((domaine) => (
-                        <Picker.Item
-                          style={styles.input}
-                          key={domaine.id}
-                          label={domaine.domaine_lib}
-                          value={domaine.id.toString()}
-                        />
-                        ))}
+                    <View style={styles.input1}>
+                      <Picker
+                        style={styles.input2}
+                        selectedValue={editedData.domaine_id.toString()} // Définir la valeur par défaut
+                        onValueChange={(itemValue, itemIndex) => {
+                          // Mettre à jour editData lors du changement de valeur
+                        setEditedData(prevData => ({
+                        ...prevData,
+                        domaine_id: parseInt(itemValue, 10),}));
+                      }}>
+                        <Picker.Item label="Sélectionnez un domaine" value="" />
+                        {domaines.map((domaine) => (
+                          <Picker.Item
+                            key={domaine.id}
+                            label={domaine.domaine_lib}
+                            value={domaine.id.toString()}
+                          />
+                          ))}
                       </Picker>
+                    </View>
 
-                    <Text style={styles.libelle}> Modifier votre Geolocalisation</Text>
-                    <TouchableHighlight 
-                      onPress={() => position()}
-                      style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:20}}>
-                    <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
-                    </TouchableHighlight>
+                    <View style={styles.input1}>
+                      <Text style={styles.libelle}> Modifier votre Geolocalisation</Text>
+                      <TouchableHighlight 
+                        onPress={() => position()}
+                        style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                      <View style={{flexDirection:'row'}}>
+                        <MaterialCommunityIcons name="google-maps" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                        <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
+                      </View>
+                      </TouchableHighlight>
+                    </View>
+                    <View style={styles.input1}>
+                      <Text style={styles.libelle}> Modifier votre photo de Profil</Text>
+                      <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
+                        <TouchableHighlight 
+                          onPress={() => selectImage(0)}
+                          style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                          <View style={{flexDirection:'row'}}>
+                            <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                            <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
+                          </View>
+                        </TouchableHighlight>
+                        <Text style={{width:'55%', fontSize:12, top:10}}>
+                          {editedData.image1.fileName ? `  ${editedData.image1.fileName.substring(0, 20)}...` : ''}
+                        </Text>
+                      </View>
+                    </View>
 
-                    <Text style={styles.libelle}> Modifier votre photo de Profil</Text>
-                    <TouchableHighlight 
-                      onPress={() => handleChoosePhoto(0)}
-                      style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:20}}>
-                    <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
-                    </TouchableHighlight>
+                    <View style={styles.input1}>
+                      <Text style={styles.libelle}> Modifier votre photo de Couverture</Text>
+                      <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
+                        <TouchableHighlight 
+                          onPress={() => selectImage(1)}
+                          style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                          <View style={{flexDirection:'row'}}>
+                            <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                            <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
+                          </View>
+                        </TouchableHighlight>
+                        <Text style={{width:'55%', fontSize:12, top:10}}>
+                          {editedData.image2.fileName ? `  ${editedData.image2.fileName.substring(0, 20)}...` : ''}
+                        </Text>
+                      </View>
+                    </View>
 
-                    <Text style={styles.libelle}> Modifier votre photo de Couverture</Text>
-                    <TouchableHighlight 
-                      onPress={() => handleChoosePhoto(1)}
-                      style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:20}}>
-                    <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
-                    </TouchableHighlight>
-
-                    <Text style={styles.libelle}>Autre Photo (optionnel) </Text>
-                    <TouchableHighlight 
-                      onPress={() => handleChoosePhoto(2)}
-                      style={{backgroundColor:'#6C37CE', height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:20}}>
-                    <Text style={{ color:'white', fontSize:18}}>Cliquez-ici</Text>
-                    </TouchableHighlight>
+                    <View style={styles.input1}>
+                      <Text style={styles.libelle}>Autre Photo (optionnelle) </Text>
+                      <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
+                        <TouchableHighlight 
+                          onPress={() => selectImage(2)}
+                          style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                          <View style={{flexDirection:'row'}}>
+                            <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                            <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
+                          </View>
+                        </TouchableHighlight>
+                        <Text style={{width:'55%', fontSize:12, top:10}}>
+                          {editedData.image3.fileName ? `  ${editedData.image3.fileName.substring(0, 20)}...` : ''}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
               )}
               </View>
               {isEditing && (
-                <View style={{ flexDirection: 'row', justifyContent: 'center', top:40, marginBottom:50}}>
-                  <TouchableHighlight 
-                    onPress={() => handleSave()}
-                    style={{backgroundColor:'#37CE37', height:45, width:'45%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
-                    <Text style={{ color:'white', fontSize:18}}>Enregistrer</Text>
-                  </TouchableHighlight>
-                  <TouchableHighlight 
-                    onPress={() => handleCancel()}
-                    style={{backgroundColor:'#810A0A', height:45, width:'45%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
-                    <Text style={{ color:'white', fontSize:18}}>Annuler</Text>
-                  </TouchableHighlight>
-                </View>
+                <View style={{ flexDirection: 'column', alignItems: 'center', top:40, marginBottom:100}}>
+                <TouchableHighlight 
+                  activeOpacity={0.8} 
+                  underlayColor='#7698F3'
+                  onPress={() => handleSave()}
+                  style={{backgroundColor:'#3792CE', height:50, width:'90%', borderRadius:25, marginBottom:10, alignItems:'center', justifyContent:'center'}}>
+                  <View style={{flexDirection:'row'}}>
+                    <Icon name="save" size={30} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                    <Text style={{ color:'white', fontSize:16, textAlign:'center'}}>Metrre a jour</Text>
+                  </View>
+                </TouchableHighlight>
+                <TouchableHighlight 
+                  activeOpacity={0.8} 
+                  underlayColor='#A5B1AFE5' 
+                  onPress={() => handleCancel()}
+                  style={{backgroundColor:'#5C5959', height:50, width:'90%', borderRadius:25, alignItems:'center', justifyContent:'center', marginBottom:20}}>
+                  <View style={{flexDirection:'row'}}>
+                    <Icon name="cancel" size={30} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                    <Text style={{ color:'white', fontSize:16, textAlign:'center'}}>Annuler</Text>
+                  </View> 
+                </TouchableHighlight>
+              </View>
               )}
             </View>
           </View>
         </ScrollView>
+         ) : (
+          <View style={styles.loadingContainer}>          
+             <ActivityIndicator size="large" color="#3792CE" />
+            <Text style={{color:'black'}}>chargement...</Text>
+          </View>
+        )}
+        <Modal transparent visible={loading} animationType="slide">
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+               <ActivityIndicator size="large" color="#3792CE" />
+              <Text style={{textAlign:'center', color:'#000000', top:15, fontWeight:'bold', fontSize:14}}>
+                Patientez...            
+              </Text>           
+              </View>
+            </View>
+        </Modal>
+        <CustomModal
+          isVisible={isModalVisible}
+          onClose={closeModal}
+          message={error}
+        />
     </View>
   );
 };
@@ -416,7 +533,7 @@ const UserCompte = ({navigation}) => {
 const styles = StyleSheet.create({
   Container: {
     flex:1,
-    backgroundColor:'white'
+    backgroundColor:'white',
   },
   loadingContainer: {
     flex: 1,
@@ -433,37 +550,48 @@ const styles = StyleSheet.create({
   image: {
     height: '100%',
     width: '100%',
-    },
+  },
+
   libelle: {
-    fontSize: 18,
-    fontFamily: 'Cochin',
+    fontSize: 14,
     fontWeight: 'bold',
     color:'black',
-    top:5,
     left:10,
   },
-  titre: {
-    fontSize: 24,
-    fontFamily: 'algerian',
-    fontWeight: 'bold',
-    color:'darkblue',
-    textAlign:'center',
-    paddingTop: 8,
-    paddingBottom: 15,
-  },
+
   input:{
     height: 40,
-    width : 350,
+    width : '100%',
     borderBottomWidth: 0.5,
     borderColor:'gray',
     margin:10,
     color:'black',
     fontSize: 16,
   },
-
-  button:{
-    color: 'black',
-  }
+  input1:{
+    width : '100%',
+    borderBottomWidth: 0.5,
+    borderColor:'gray',
+    margin:10,
+  },
+  
+  input2:{
+    width : '100%',
+    borderBottomWidth: 1,
+    borderColor:'gray',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fond semi-transparent
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
 })
 
 

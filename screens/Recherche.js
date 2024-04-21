@@ -1,20 +1,55 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, TextInput, FlatList, Text, Image, StyleSheet, TouchableHighlight, ActivityIndicator } from 'react-native';
+import React, { useState, } from 'react';
+import { View, TextInput, FlatList, Text, Image, StyleSheet, TouchableHighlight, ActivityIndicator, Alert, Button, RefreshControl } from 'react-native';
 import StarRating from 'react-native-star-rating';
 import apiConfig from '../services/config';
 import { useFocusEffect } from '@react-navigation/native';
 import Geolocation from '@react-native-community/geolocation';
+import { Dimensions } from 'react-native';
 
 const Recherche = ({route, navigation}) => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [loading, setLoading] = useState(true); // Ajout de l'état loading
-  
+  const [loading, setLoading] = useState(true);
+  const [offInternet, setOffInternet] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  screenHeight = Dimensions.get('window').height;
 
-  useFocusEffect(
-    React.useCallback(() => {
+  const get = async () => {
+      const getPosition = async () => {
+        return new Promise((resolve, reject) => {
+          Geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 15000 }
+          );
+        });
+      };
+    
+      // Tentative de récupération de la position avec une limite de tentatives
+      let position = null;
+      let attempts = 0;
+      const maxAttempts = 10; // Nombre maximal de tentatives
+    
+      while (position === null && attempts < maxAttempts) {
+        try {
+          position = await getPosition();
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation({ latitude, longitude });
+        } catch (error) {
+          if (position === null && attempts === 9) {
+            Alert.alert('Impossible de récupérer la position. Veuillez activer votre localisation.');
+            setLoading(false);
+            setOffInternet(true);
+          }
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Pause de 2 secondes entre les tentatives
+        }
+      }
+
+    if (position !== null) {
+      setSearchText('')
       const apiUrl = `${apiConfig.apiUrl}/index_global`;
       fetch(apiUrl)
         .then(response => response.json())
@@ -22,62 +57,53 @@ const Recherche = ({route, navigation}) => {
           setData(initialData);
           setFilteredData(initialData);
         })
-        .catch(error => console.error('Erreur lors de la récupération des données :', error))
-        .finally(() => setLoading(false));
+        .catch(error => {
+          setOffInternet(true)
+        }).finally(() => setLoading(false));
+    }
+  }
+
+  useFocusEffect(
+    React.useCallback(() => {
+     get()
     }, [])
   );
 
-  
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      get();
+      setRefreshing(false);
+    }, 2000);
+  };
+
+  const handleRetry = () => {
+    setOffInternet(false);
+    setLoading(true);
+    get();
+  };
+
   const handleSearch = (text) => {
     setSearchText(text);
 
     if (text.trim() === '') {
       setFilteredData(data);
     } else {
-      try {
         const apiUrl = `${apiConfig.apiUrl}/global_search?search=${searchText}`;
         fetch(apiUrl)
           .then(response => response.json())
           .then(filtered => setFilteredData(filtered))
           .catch(error => {
-            console.error('Erreur lors de la requête API :', error);
+            setOffInternet(true)
           });
-      } catch (error) {
-        console.log('Erreur lors de la requête API :', error);
-      }
     }
   };
   
-  const details = async (professionalId) =>{ 
-
-    try {
-      //console.log('Avant getCurrentPosition');
-      const position = await new Promise((resolve, reject) => {
-        Geolocation.getCurrentPosition(
-          resolve,
-          reject,
-          { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
-        );
-      });
-  
-      //console.log('Position récupérée:', position);
-      const { latitude, longitude } = position.coords;
-      setCurrentLocation({ latitude, longitude });
-  
-      //console.log('currentLocation mis à jour:', currentLocation);
-  
-      const domaine_data = [{ latitude, longitude }, professionalId];
-      //console.log(domaine_data)
-      navigation.navigate('Details', { domaine_data });
-    } catch (error) {
-      console.log('Erreur:', error.message);
-      // Gérer l'erreur, par exemple afficher un message à l'utilisateur
-    }
-
-  }
+  const details =  (professionalId) => {
+    navigation.navigate('Details', {latitude: currentLocation.latitude, longitude: currentLocation.longitude, professionalId: professionalId});
+  };
 
   const renderProfessionalItem = ({ item }) => (
-    
       <View style={styles.profsContainer}>
         <TouchableHighlight
           onPress={() => details(item.id)}
@@ -85,36 +111,23 @@ const Recherche = ({route, navigation}) => {
           underlayColor="#EFF7F6E5"
           style={styles.touchableHighlight}
         >
-          <View style={styles.profs}>
+          <View style={[styles.profs, { height: screenHeight / 6 }]}>
             <Image
-              source={{ uri: item.image1 }}
+              source={{ uri: `${apiConfig.imageUrl}/${item.image1}` }}
               style={{
                 width: '100%',
-                height: 150,
-                borderTopLeftRadius: 15,
-                borderTopRightRadius: 15,
+                height: '50%',
+                borderTopLeftRadius: 10,
+                borderTopRightRadius: 10,
               }}
             />
-            <View style={{ flex: 1, alignItems: 'center', marginTop: -60 }}>
-              <Image
-                source={{ uri: item.image2 }}
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 50,
-                  borderColor: '#053D37E5',
-                  borderWidth: 1
-                }}
-              />
-            </View>
             <View style={styles.text_view}>
-              <Text style={styles.text}>{`${item.nom} ${item.prenom}`}</Text>
-              <Text style={styles.text}>{`${item.nom_entreprise}`}</Text>
-              <Text style={styles.text}>{item.domaine?.domaine_lib ?? item.domaine_lib}</Text>
-              <View style={{ marginTop: 20, marginBottom: 10 }}>
+            <Text style={styles.text}>{`${item.nom_entreprise.substring(0, 15)}`}...</Text>
+              <Text style={styles.text}>{item.domaine?.domaine_lib ?? `${item.domaine_lib.substring(0, 15)}`}...</Text>
+              <View style={{ marginTop: 15, marginBottom: 10 }}>
                 <StarRating
                   disabled
-                  starSize={23}
+                  starSize={15}
                   maxStars={5}
                   rating={parseFloat(item.moyenne_notations)}
                   fullStarColor={'#FDE03A'}
@@ -129,23 +142,15 @@ const Recherche = ({route, navigation}) => {
 
   return (
     <View style={styles.container}>
-      <View>
-        <TextInput
-          style={{
-            height: 40,
-            borderColor: '#9B1126',
-            borderWidth: 2,
-            margin: 10,
-            padding: 5,
-            borderRadius: 18,
-          }}
+        <View>
+          <TextInput
+            style={{height: 40, borderColor: '#3792CE', borderWidth: 2, margin: 10, padding: 5, borderRadius: 18,}}
           placeholder={'Rechercher...'}
           onChangeText={handleSearch}
           value={searchText}
           editable={true}
         />
       </View>
-
       {searchText.trim() !== '' && filteredData.length === 0 ? (
         <View
           style={{
@@ -155,7 +160,7 @@ const Recherche = ({route, navigation}) => {
             marginTop: 250,
           }}
         >
-          <Text style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 18 }}>
+          <Text style={{ textAlign: 'center', color:'black', fontSize: 14 }}>
             Aucun résultat trouvé
           </Text>
           <Image
@@ -164,19 +169,32 @@ const Recherche = ({route, navigation}) => {
           />
         </View>
       ) : loading ? ( // Utiliser l'état loading pour afficher un indicateur de chargement
-      <View style={{flex:1, justifyContent: 'center', alignItems:'center'}}>
-        <ActivityIndicator size="large" color="#288A10" style={{ marginTop: 20 }} />
+        <View style={{flex:1, justifyContent: 'center', alignItems:'center'}}>
+          <ActivityIndicator size="large" color="#3792CE" />
+          <Text style={{color:'black'}}>chargement...</Text>
+        </View>
+      ) : offInternet ? (
+        <View style={{ flex:1, justifyContent: 'center', alignItems: 'center'}}>
+          <Text style={{color:'black', marginBottom:5}}>Erreur de connexion</Text>
+          <Button title='Reessayer' color={'#888B8B'} onPress={handleRetry} titleStyle={{ color: 'black' }}></Button>
+        </View>
+      ) : (
+      <View style={{ left:3 }}>
+        <FlatList
+          data={filteredData}
+          renderItem={renderProfessionalItem}
+          keyExtractor={(item, index) => index.toString()}
+          numColumns={3}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#3792CE" // Couleur de la flèche de rafraîchissement (optionnel)
+            />
+          }
+        />
       </View>
-  ) : (
-    <View style={{ left:3 }}>
-      <FlatList
-        data={filteredData}
-        renderItem={renderProfessionalItem}
-        keyExtractor={(item, index) => index.toString()}
-        numColumns={2}
-      />
-    </View>
-  )}
+      )}
     </View>
   );
   
@@ -188,34 +206,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF', // Couleur de fond
   },
-
+  
   profsContainer: {
-    width: '48%',
-    marginLeft : 3,
     marginRight:3, 
-    marginTop:3,
-    marginBottom:7
+    marginBottom:3,
+    borderWidth:0.3,
+    width:'32%',
+    borderRadius:10,
+    borderColor:'gray'
   },
   
   profs:{
-    borderWidth: 2,
-    borderRadius: 15,
-    borderColor: 'gray',
-    height: 300,
     backgroundColor: 'white',
   },
+  
   text_view:{
     flex: 1,
     flexDirection: 'colunn',
     justifyContent: 'space-around',
     alignItems: 'center',
-    margin: 5,
-    height: 60,
   },
 
   text:{
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 12,
     color: '#062153',
     textAlign: 'center',
     marginTop: 15

@@ -5,17 +5,24 @@ import MonCompte from '../screens/MonCompte';
 import Chats from '../screens/Chats';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import { StatusBar } from 'react-native';
 
 const BottomTabs = () => {
     
     const Tab = createBottomTabNavigator();
-
+    StatusBar.setBackgroundColor('#3792CE'); 
     return (
         <Tab.Navigator
           initialRouteName="Accueil"
           screenOptions={{
-            tabBarActiveTintColor: '#150347',
+            tabBarActiveTintColor: 'white',
+            tabBarInactiveTintColor: '#ADAFB1',            
+            tabBarActiveBackgroundColor:'#3792CE',
+            tabBarInactiveBackgroundColor:'#3792CE',
+            tabBarHideOnKeyboard:true,
+            tabBarLabelStyle: {
+              "fontWeight": "bold"
+            },
           }}
         >
           <Tab.Screen
@@ -23,9 +30,16 @@ const BottomTabs = () => {
             component={Home}
             options={{
               tabBarLabel: 'Accueil',
+              headerShown:false,
               tabBarIcon: ({ color, size }) => (
                 <MaterialCommunityIcons name="home" color={color} size={size} />
               ),
+              headerStyle: {
+                backgroundColor: '#3792CE', // Couleur de l'en-tête
+              },
+              headerTitleStyle: {
+                color: 'white', // Couleur du texte du titre de l'en-tête
+              },
             }}
           />
           <Tab.Screen
@@ -36,26 +50,44 @@ const BottomTabs = () => {
               tabBarIcon: ({ color, size }) => (
                 <MaterialCommunityIcons name="clipboard-search-outline" color={color} size={size} />
               ),
+              headerStyle: {
+                backgroundColor: '#3792CE', // Couleur de l'en-tête
+              },
+              headerTitleStyle: {
+                color: 'white', // Couleur du texte du titre de l'en-tête
+              },
             }}
           />
           <Tab.Screen
-            name="Messages"
+            name="Discussions"
             component={Chats}
             options={{
-              tabBarLabel: 'Messages',
+              tabBarLabel: 'Discussions',
               tabBarIcon: ({ color, size }) => (
                 <MaterialCommunityIcons name="chat" color={color} size={size} />
               ),
+              headerStyle: {
+                backgroundColor: '#3792CE', // Couleur de l'en-tête
+              },
+              headerTitleStyle: {
+                color: 'white', // Couleur du texte du titre de l'en-tête
+              },
             }}
           />
           <Tab.Screen
-            name="Profile"
+            name="Profil"
             component={MonCompte}
             options={{
-              tabBarLabel: 'Profile',
+              tabBarLabel: 'Profil',
               tabBarIcon: ({ color, size }) => (
                 <MaterialCommunityIcons name="account" color={color} size={size} />
               ),
+              headerStyle: {
+                backgroundColor: '#3792CE', // Couleur de l'en-tête
+              },
+              headerTitleStyle: {
+                color: 'white', // Couleur du texte du titre de l'en-tête
+              },
             }}
           />
         </Tab.Navigator>

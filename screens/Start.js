@@ -9,9 +9,19 @@ const Start = ({ navigation }) => {
     try {
       let user = await AsyncStorage.getItem('formDataToSend');
       if (user !== null) {
-        navigation.navigate('Home');
+        setTimeout(() => {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          });
+        }, 1000);
       } else {
-        navigation.navigate('CreateClient');
+        setTimeout(() => {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'CreateClient' }],
+          });
+        }, 1000);
       }
     } catch (error) {
       Alert.alert('error')
@@ -31,7 +41,7 @@ const Start = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Image 
-      source={require('../assets/images/load.jpeg')} style={styles.logo} />
+      source={require('../assets/images/load.jpg')} style={styles.logo} />
       <View style={styles.contentContainer}>
           <Text style={styles.bottomText}>WELCOME TO MY APP.....</Text>
       </View>    

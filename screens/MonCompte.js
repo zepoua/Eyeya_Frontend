@@ -13,13 +13,17 @@ const MonCompte = () => {
   const getData = async () => {
     try {
       const storedData = await AsyncStorage.getItem('formDataToSend');
+      
+      // Vérifier si storedData est non null avant de le traiter
+      if (storedData !== null) {
         const parsedData = JSON.parse(storedData);
-        setDataPhone(parsedData);  
-        setLoad(true)    
+        setDataPhone(parsedData);
+        setLoad(true);
+      }
     } catch (error) {
-      console.error('Erreur lors de la récupération des données :', error);
     }
   };
+  
 
   useEffect(() => {
     getData();

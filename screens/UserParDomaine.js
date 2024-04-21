@@ -1,258 +1,240 @@
-import { StyleSheet, Text, View, Image, FlatList, TouchableHighlight, TouchableOpacity,TextInput, Modal, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Image, FlatList, TouchableHighlight, TouchableOpacity,TextInput, Modal, ActivityIndicator, Button, RefreshControl } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import StarRating from 'react-native-star-rating'; // Vous pouvez utiliser une bibliothèque pour les étoiles
 import apiConfig from '../services/config';
-import Icon from 'react-native-vector-icons/FontAwesome';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import RadioForm, {RadioButton, RadioButtonInput, RadioButtonLabel} from 'react-native-simple-radio-button';
-import Geolocation from '@react-native-community/geolocation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import CustomModal from './test';
+import { Dimensions } from 'react-native';
+
 
 const UserParDomaine = ({route, navigation}) => {
   
-    const [data, setData] = useState([]);
-    const [filteredData, setFilteredData] = useState([]);
-    const [searchText, setSearchText] = useState('');
-    const [loading, setLoading] = useState(true); // Ajout de l'état loading
-    const [modalVisible, setModalVisible] = useState(false);
-    const [selectedFilter, setSelectedFilter] = useState(null);
-    const [currentLocation, setCurrentLocation] = useState(null);
-    
-    const jsonData =  route.params;
-    // Extraction des données
-    const domaineData = jsonData.domaine_data;
-    const latitude = domaineData[0].latitude;
-    const longitude = domaineData[0].longitude;
-    const domaine_id = domaineData[1];
+  const [data, setData] = useState([]);
+  const [offInternet, setOffInternet] = useState(false);
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState(null);
 
-    useFocusEffect(
-      React.useCallback(() => {
-        const fetchData = async () => {
-          try {
-            const apiUrl = `${apiConfig.apiUrl}/user?domaine_id=${domaine_id}&latitude=${latitude}&longitude=${longitude}`;
-            const response = await fetch(apiUrl);
-            const initialData = await response.json();
-  
-            const formattedUsers = initialData.map(user => {
-              let formattedDistance;
-  
-              if (user.distance < 1000) {
-                formattedDistance = user.distance.toFixed(2) + ' m';
-              } else {
-                formattedDistance = (user.distance / 1000).toFixed(2) + ' km';
-              }
-  
-              return {
-                ...user,
-                formattedDistance,
-              };
-            });
-  
-            setData(formattedUsers);
-            setFilteredData(formattedUsers);
-          } catch (error) {
-            console.error('Erreur lors de la récupération des données :', error);
-          } finally {
-            setLoading(false);
-          }
-        };
-  
-        fetchData(); // Appeler la fonction fetchData pour effectuer la requête initiale.
-  
-        // Le tableau de dépendances est vide car nous ne voulons exécuter cet effet qu'une seule fois lors du montage initial.
-      }, [])
-    );
+  const { domaine_data } = route.params;
+  const { latitude, longitude } = domaine_data.currentLocation;
+  const domaine_id = domaine_data.domaine_id;
+  screenHeight = Dimensions.get('window').height;
 
-    const handleSearch = (text) => {
-        setSearchText(text);
-    
-       if (text.trim() === '') {
-          setFilteredData(data);
+  const fetchData = async () => {
+    try {
+      const apiUrl = `${apiConfig.apiUrl}/user?domaine_id=${domaine_id}&latitude=${latitude}&longitude=${longitude}`;
+      const response = await fetch(apiUrl);
+      const initialData = await response.json();
+
+      const formattedUsers = initialData.map(user => {
+        let formattedDistance;
+
+        if (user.distance < 1000) {
+          formattedDistance = user.distance.toFixed(2) + ' m';
         } else {
-          try {
-            const apiUrl = `${apiConfig.apiUrl}/search?search=${searchText}&domaine_id=${domaine_id}`;
-            fetch(apiUrl)
-              .then(response => response.json())
-              .then(filtered => setFilteredData(filtered))
-              .catch(error => {
-                console.error('Erreur lors de la requête API :', error);
-              });
-          } catch (error) {
-            console.log('Erreur lors de la requête API :', error);
-          }
+          formattedDistance = (user.distance / 1000).toFixed(2) + ' km';
         }
-    };
 
-    const handleFilterPress = () => {
-      setModalVisible(true);
-    };
-  
-    const handleFilterApply = () => {
-      const apiUrl = `${apiConfig.apiUrl}/user?domaine_id=${domaine_id}&latitude=${latitude}&longitude=${longitude}&distance=${selectedFilter}`;
-      
+        return {
+          ...user,
+          formattedDistance,
+        };
+      });
+
+      setData(formattedUsers);
+      setFilteredData(formattedUsers);
+    } catch (error) {
+      setOffInternet(true)
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      fetchData();
+    }, 2000);
+  };
+
+  const handleRetry = () => {
+    setOffInternet(false);
+    setLoading(true);
+    fetchData();
+  };
+
+  const handleSearch = (text) => {
+    setSearchText(text);
+
+    if (text.trim() === '') {
+      setFilteredData(data);
+    } else {
+      const apiUrl = `${apiConfig.apiUrl}/search?search=${searchText}&domaine_id=${domaine_id}`;
       fetch(apiUrl)
         .then(response => response.json())
-        .then(initialData => {
-          // Supposons que 'users' est votre tableau d'utilisateurs avec la distance renvoyée par le backend.
-          const formattedUsers = initialData.map(user => {
-            let formattedDistance;
-    
-            // Si la distance est inférieure à 1000 mètres, la formater en mètres avec deux chiffres après la virgule.
-            if (user.distance < 1000) {
-              formattedDistance = user.distance.toFixed(2) + ' m';
-            } else {
-              // Si la distance est supérieure ou égale à 1000 mètres, la convertir en kilomètres avec deux chiffres après la virgule.
-              formattedDistance = (user.distance / 1000).toFixed(2) + ' km';
-            }
-    
-            return {
-              ...user,
-              formattedDistance,
-            };
-          });
-              setFilteredData(formattedUsers);
-        })
-        .catch(error => console.error('Erreur lors de la récupération des données :', error))
-        .finally(() => setLoading(false));
-      setModalVisible(false);
-    };
-  
-  
-    const radio_props = [
-      { label: 'Inférieur ou egale à 10 km', value: '1' },
-      { label: 'Entre 10 km et 20 km', value: '2' },
-      { label: '5 etoiles', value: '3' },
-      { label: '4 etoiles', value: '4' },
-      { label: '3 etoiles', value: '5' },   
-      { label: 'Reinitialiser', value: '6' },
-
-    ];
-
-    const details = async (professionalId) =>{ 
-
-      try {
-        //console.log('Avant getCurrentPosition');
-        const position = await new Promise((resolve, reject) => {
-          Geolocation.getCurrentPosition(
-            resolve,
-            reject,
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
-          );
+        .then(filtered => setFilteredData(filtered))
+        .catch(error => {
+          setOffInternet(true)
         });
-    
-        //console.log('Position récupérée:', position);
-        const { latitude, longitude } = position.coords;
-        setCurrentLocation({ latitude, longitude });
-    
-        //console.log('currentLocation mis à jour:', currentLocation);
-    
-        const domaine_data = [{ latitude, longitude }, professionalId];
-        //console.log(domaine_data)
-        navigation.navigate('Details', { domaine_data });
-      } catch (error) {
-        console.log('Erreur:', error.message);
-        // Gérer l'erreur, par exemple afficher un message à l'utilisateur
-      }
     }
+  };
 
-    const renderProfessionalItem = ({ item }) => (
-    
-      <View style={styles.profsContainer}>
-        <TouchableHighlight
-          onPress={() => details(item.id)}
-          activeOpacity={0.8}
-          underlayColor="#EFF7F6E5"
-          style={styles.touchableHighlight}
-        >
-          <View style={styles.profs}>
-            <Image
-              source={{ uri: item.image1 }}
-              style={{
-                width: '100%',
-                height: 150,
-                borderTopLeftRadius: 15,
-                borderTopRightRadius: 15,
-              }}
-            />
-            <View style={{ flex: 1, alignItems: 'center', marginTop: -60 }}>
-              <Image
-                source={{ uri: item.image2 }}
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 50,
-                  borderColor: '#053D37E5',
-                  borderWidth: 1
-                }}
-              />
-            </View>
-            <View style={styles.text_view}>
-              <Text style={styles.text}>{`${item.nom} ${item.prenom}`}</Text>
-              <Text style={styles.text}>{`${item.nom_entreprise}`}</Text>
-              <Text style={styles.text}>{item.domaine?.domaine_lib ?? item.domaine_lib}</Text>
-              <Text style={styles.text1}>{`${item.formattedDistance}`}</Text>
-              <View style={{ marginTop: 20, marginBottom: 13 }}>
-                <StarRating
-                  disabled
-                  starSize={23}
-                  maxStars={5}
-                  rating={parseFloat(item.moyenne_notations)}
-                  fullStarColor={'#FDE03A'}
-                  halfStarColor={'#F59C17'}
-                />            
-              </View>
+  const handleFilterPress = () => {
+    setModalVisible(true);
+  };
+
+  const handleFilterApply = () => {
+    setLoading(true); // Ajoutez cette ligne pour activer le chargement pendant la requête
+    const apiUrl = `${apiConfig.apiUrl}/user?domaine_id=${domaine_id}&latitude=${latitude}&longitude=${longitude}&distance=${selectedFilter}`;
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(initialData => {
+        // Supposons que 'users' est votre tableau d'utilisateurs avec la distance renvoyée par le backend.
+        const formattedUsers = initialData.map(user => {
+          let formattedDistance;
+  
+          // Si la distance est inférieure à 1000 mètres, la formater en mètres avec deux chiffres après la virgule.
+          if (user.distance < 1000) {
+            formattedDistance = user.distance.toFixed(2) + ' m';
+          } else {
+            // Si la distance est supérieure ou égale à 1000 mètres, la convertir en kilomètres avec deux chiffres après la virgule.
+            formattedDistance = (user.distance / 1000).toFixed(2) + ' km';
+          }
+  
+          return {
+            ...user,
+            formattedDistance,
+          };
+        });
+            setFilteredData(formattedUsers);
+      })
+      .catch(error => {
+        setOffInternet(true)
+      })
+      .finally(() => {
+        setLoading(false);
+        setModalVisible(false);
+      });
+  };
+
+
+  const radio_props = [
+    { label: 'Inférieur ou egale à 10 km', value: '1' },
+    { label: 'Entre 10 km et 20 km', value: '2' },
+    { label: '5 etoiles', value: '3' },
+    { label: '4 etoiles', value: '4' },
+    { label: '3 etoiles', value: '5' },   
+    { label: 'Reinitialiser', value: '6' },
+
+  ];
+
+  const details = async (professionalId) => { 
+    navigation.navigate('Details', { latitude, longitude, professionalId });
+  };
+  
+  const renderProfessionalItem = ({ item }) => (
+    <View style={styles.profsContainer}>
+      <TouchableHighlight
+        onPress={() => details(item.id)}
+        activeOpacity={0.8}
+        underlayColor="#EFF7F6E5"
+        style={styles.touchableHighlight}
+      >
+        <View style={[styles.profs, { height: screenHeight / 6 }]}>
+          <Image
+            source={{ uri: `${apiConfig.imageUrl}/${item.image1}` }}
+            style={{
+              width: '100%',
+              height: '50%',
+              borderTopLeftRadius: 10,
+              borderTopRightRadius: 10,
+            }}
+          />
+          <View style={styles.text_view}>
+          <Text style={styles.text}>{`${item.nom_entreprise.substring(0, 15)}`}...</Text>
+            <Text style={styles.text1}>{`${item.formattedDistance}`}</Text>
+            <View style={{ marginTop: 20, marginBottom: 10 }}>
+              <StarRating
+                disabled
+                starSize={15}
+                maxStars={5}
+                rating={parseFloat(item.moyenne_notations)}
+                fullStarColor={'#FDE03A'}
+                halfStarColor={'#F59C17'}
+              />            
             </View>
           </View>
-        </TouchableHighlight>
-      </View>
+        </View>
+      </TouchableHighlight>
+    </View>
   );
     
   return (
-    <View style={styles.container}>
-        <View style={{flexDirection:'row'}}>
-          <TextInput
-            style={{
-                height: 40,
-                borderColor: '#9B1126',
-                borderWidth: 2,
-                margin: 10,
-                padding: 5,
-                borderRadius: 18,
-                width:320
-            }}
-            placeholder={'Rechercher...'}
-            onChangeText={handleSearch}
-            value={searchText}
-            editable={filteredData.length > 0}/>
-          <TouchableOpacity style={{margin: 6}}  onPress={handleFilterPress}>
-              <Icon name="star" size={30} color={'#FDE03A'}/>
-              <Text  style={{textAlign:'left'}}>Filtrer</Text>
-          </TouchableOpacity>
-        </View>
-        {searchText.trim() !== '' && filteredData.length === 0 ? (
-        <View
+    <View style={styles.container}>    
+      <View style={{flexDirection:'row', width:'100%', paddingRight:10, marginBottom:5}}>
+        <TextInput
           style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: 250,
+            height: 40,
+            borderColor: '#3792CE',
+            borderWidth: 2,
+            margin: 10,
+            padding: 5,
+            borderRadius: 18,
+            width:'83%'
           }}
-        >
-          <Text style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 18 }}>
-            Aucun résultat trouvé
-          </Text>
-          <Image
-            source={require('../assets/images/search.png')}
-            style={{ width: 100, height: 100 }}
-          />
-        </View>
-      ) : loading ? ( // Utiliser l'état loading pour afficher un indicateur de chargement
+          placeholder={'Rechercher...'}
+          onChangeText={handleSearch}
+          value={searchText}
+          editable={filteredData.length > 0}/>
+          <TouchableOpacity style={{marginTop: 10, width:'14%'}}  onPress={handleFilterPress}>
+            <Icon name="filter" size={25} color={'#242322'}/>
+            <Text  style={{textAlign:'left'}}>Filtrer</Text>
+        </TouchableOpacity>
+      </View>
+      {searchText.trim() !== '' && filteredData.length === 0 ? (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: 250,
+        }}
+      >
+        <Text style={{ textAlign: 'center', color:'black', fontSize: 14 }}>
+          Aucun résultat trouvé
+        </Text>
+        <Image
+          source={require('../assets/images/search.png')}
+          style={{ width: 100, height: 100 }}
+        />
+      </View>
+    ) : loading ? ( // Utiliser l'état loading pour afficher un indicateur de chargement
       <View style={{flex:1, justifyContent: 'center', alignItems:'center'}}>
-        <ActivityIndicator size="large" color="#288A10" style={{ marginTop: 20 }} />
+        <ActivityIndicator size="large" color="#3792CE"/>
+        <Text style={{color:'black'}}>chargement...</Text>
+      </View>
+    ) : offInternet ? (
+      <View style={{ flex:1, justifyContent: 'center', alignItems: 'center'}}>
+        <Text style={{color:'black', marginBottom:5}}>Erreur de connexion</Text>
+        <Button title='Reessayer' color={'#888B8B'} onPress={handleRetry} titleStyle={{ color: 'black' }}></Button>
       </View>
     ) : filteredData.length === 0 ? (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 18 }}>
-          Aucun Professionnel dans ce domaine
+        <Text style={{ textAlign: 'center', color:'black', fontSize: 14 }}>
+          Aucun Professionnel dans ce domaine.
         </Text>
         <Image
           source={require('../assets/images/search.png')}
@@ -265,44 +247,49 @@ const UserParDomaine = ({route, navigation}) => {
           data={filteredData}
           renderItem={renderProfessionalItem}
           keyExtractor={(item, index) => index.toString()}
-          numColumns={2}
+          numColumns={3}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#3792CE" // Couleur de la flèche de rafraîchissement (optionnel)
+            />
+          }
         />
       </View>
-      )}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => {
-          setModalVisible(false);
-        }}
-      >
+    )}
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => {
+        setModalVisible(false);
+      }}
+    >
+      <View style={{
+        flex: 1,
+        justifyContent: 'flex-end', // Aligner le contenu en bas
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fond semi-transparent pour un effet d'ombrage
+      }}>
         <View style={{
-          flex: 1,
-          justifyContent: 'flex-end', // Aligner le contenu en bas
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fond semi-transparent pour un effet d'ombrage
+          backgroundColor: 'white',
+          padding: 20,
+          borderTopLeftRadius: 10,
+          borderTopRightRadius: 10,
         }}>
-          <View style={{
-            backgroundColor: 'white',
-            padding: 20,
-            borderTopLeftRadius: 10,
-            borderTopRightRadius: 10,
-          }}>
-            {/* Contenu du modal */}
-            <RadioForm
-              radio_props={radio_props}
-              initial={-1}
-              onPress={(value) => {
-                setSelectedFilter(value);
-              }}
-              formHorizontal={false}
-            />
-            <TouchableOpacity onPress={handleFilterApply}>
-              <Text style={{ color: '#8A5506', marginTop: 10 }}>Appliquer</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Contenu du modal */}
+          <RadioForm
+            radio_props={radio_props}
+            initial={-1}
+            onPress={(value) => {
+              setSelectedFilter(value);
+              handleFilterApply();
+            }}
+            formHorizontal={false}
+          />
         </View>
-      </Modal>
+      </View>
+    </Modal>
   </View>
   );
 };
@@ -315,20 +302,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF', // Couleur de fond
   },
-
+  
   profsContainer: {
-    width: '48%',
-    marginLeft : 3,
     marginRight:3, 
-    marginTop:3,
-    marginBottom:7
+    marginBottom:3,
+    borderWidth:0.3,
+    width:'32%',
+    borderRadius:10,
+    borderColor:'gray'
   },
   
   profs:{
-    borderWidth: 1,
-    borderRadius: 15,
-    borderColor: 'gray',
-    height: 320,
     backgroundColor: 'white',
   },
   text_view:{
@@ -336,25 +320,20 @@ const styles = StyleSheet.create({
     flexDirection: 'colunn',
     justifyContent: 'space-around',
     alignItems: 'center',
-    margin: 5,
-    height: 60,
   },
 
   text:{
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 12,
     color: '#062153',
     textAlign: 'center',
-    marginTop: 10,
-    marginBottom:15
+    marginTop: 15,
   },
+
   text1:{
     color: '#791414',
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 12,
     textAlign: 'center',
-    marginTop: 10,
-    marginBottom:10
+    marginTop: 15,
   },
   touchableHighlight: {
   },
