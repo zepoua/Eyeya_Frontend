@@ -70,15 +70,21 @@ const CreateUser = ({navigation}) => {
   
   const handleFieldChange = (fieldName, text) => {
     if (fieldName === 'nom') {
-      text = text.toUpperCase();
+      setFormData({
+        ...formData,
+        ['nom']: text.toUpperCase(),
+      });
     }else if(fieldName === 'nom_entreprise'){
-      text = text.toUpperCase();
+      setFormData({
+        ...formData,
+        ['nom_entreprise']: text.toUpperCase(),
+      });
+    }else{
+      setFormData({
+        ...formData,
+        [fieldName]: text,
+      });
     }
-
-    setFormData({
-      ...formData,
-      [fieldName]: text,
-    });
   };
 
   const [Images1, setImages1] = useState({});
@@ -166,22 +172,22 @@ const CreateUser = ({navigation}) => {
     userData.append('experience', formData.experience);
     userData.append('description', formData.description);
     userData.append('domaine_id', selectedDomaine);
-    if (Images1 && Images1.uri) {
+    if (Images1.uri) {
       userData.append('image1', {
         uri: Images1.uri,
         type: Images1.type,
         name: Images1.fileName,
       });
     }
-    if (Images2 && Images2.uri) {
-      userData.append('image1', {
+    if (Images2.uri) {
+      userData.append('image2', {
         uri: Images2.uri,
         type: Images2.type,
         name: Images2.fileName,
       });
     }
-    if (Images3 && Images3.uri) {
-      userData.append('image1', {
+    if (Images3.uri) {
+      userData.append('image3', {
         uri: Images3.uri,
         type: Images3.type,
         name: Images3.fileName,
@@ -380,75 +386,79 @@ const CreateUser = ({navigation}) => {
                   <Text style={styles.libelle}>
                       Sélectionnez un domaine
                   </Text>
-                      <Picker
-                          style={styles.input2}
-                          selectedValue={selectedDomaine}
-                          onValueChange={(itemValue, itemIndex) => setSelectedDomaine(itemValue)}>
-                          <Picker.Item label="Sélectionnez un domaine" value="" />
-                          {domaines.map((domaine) => (
-                          <Picker.Item
-                              style={styles.input}
-                              key={domaine.id}
-                              label={domaine.domaine_lib}
-                              value={domaine.id.toString()}
-                          />
-                          ))}
-                      </Picker>
-                    </View>
-                    <View style={styles.input1}>
-                      <Text style={styles.libelle}>
-                          Photo de Profil
-                      </Text>
-                      <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
-                        <TouchableHighlight 
-                          onPress={() => selectImage(0)}
-                          style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
-                          <View style={{flexDirection:'row'}}>
-                            <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
-                            <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
-                          </View>
-                        </TouchableHighlight>
-                        <Text style={{width:'55%', fontSize:12, top:10}}>
-                          {Images1.fileName ? `  ${Images1.fileName.substring(0, 20)}...` : ''}
-                        </Text>
+                  <Picker
+                      style={styles.input2}
+                      selectedValue={selectedDomaine}
+                      onValueChange={(itemValue, itemIndex) => setSelectedDomaine(itemValue)}>
+                      <Picker.Item label="Sélectionnez un domaine" value="" />
+                      {domaines.map((domaine) => (
+                      <Picker.Item
+                          style={styles.input}
+                          key={domaine.id}
+                          label={domaine.domaine_lib}
+                          value={domaine.id.toString()}
+                      />
+                      ))}
+                  </Picker>
+                </View>
+
+                <View style={styles.input1}>
+                  <Text style={styles.libelle}>
+                      Photo de Profil
+                  </Text>
+                  <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
+                    <TouchableHighlight 
+                      onPress={() => selectImage(0)}
+                      style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                      <View style={{flexDirection:'row'}}>
+                        <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                        <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
                       </View>
-                    </View>
-                    <View style={styles.input1}>
-                      <Text style={styles.libelle}>
-                          Photo de Couverture
-                      </Text>
-                      <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
-                        <TouchableHighlight 
-                          onPress={() => selectImage(1)}
-                          style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
-                          <View style={{flexDirection:'row'}}>
-                            <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
-                            <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
-                          </View>
-                        </TouchableHighlight>
-                        <Text style={{width:'55%', fontSize:12, top:10}}>
-                          {Images2.fileName ? `  ${Images2.fileName.substring(0, 20)}...` : ''}
-                        </Text>
+                    </TouchableHighlight>
+                    <Text style={{width:'55%', fontSize:12, top:10}}>
+                      {Images1.fileName ? `  ${Images1.fileName.substring(0, 20)}...` : ''}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.input1}>
+                  <Text style={styles.libelle}>
+                      Photo de Couverture
+                  </Text>
+                  <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
+                    <TouchableHighlight 
+                      onPress={() => selectImage(1)}
+                      style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                      <View style={{flexDirection:'row'}}>
+                        <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                        <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
                       </View>
-                    </View>
-                    <View style={styles.input1}>
-                      <Text style={styles.libelle}>
-                         Autre Photo (optionnel)
-                      </Text>
-                      <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
-                        <TouchableHighlight 
-                          onPress={() => selectImage(2)}
-                          style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
-                          <View style={{flexDirection:'row'}}>
-                            <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
-                            <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
-                          </View>
-                        </TouchableHighlight>
-                        <Text style={{width:'55%', fontSize:12, top:10}}>
-                          {Images3.fileName ? `  ${Images3.fileName.substring(0, 20)}...` : ''}
-                        </Text>
+                    </TouchableHighlight>
+                    <Text style={{width:'55%', fontSize:12, top:10}}>
+                      {Images2.fileName ? `  ${Images2.fileName.substring(0, 20)}...` : ''}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.input1}>
+                  <Text style={styles.libelle}>
+                      Autre Photo (optionnel)
+                  </Text>
+                  <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
+                    <TouchableHighlight 
+                      onPress={() => selectImage(2)}
+                      style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                      <View style={{flexDirection:'row'}}>
+                        <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                        <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
                       </View>
-                    </View>
+                    </TouchableHighlight>
+                    <Text style={{width:'55%', fontSize:12, top:10}}>
+                      {Images3.fileName ? `  ${Images3.fileName.substring(0, 20)}...` : ''}
+                    </Text>
+                  </View>
+                </View>
+                
                 <View style={{ flexDirection: 'column', alignItems: 'center', top:30, marginBottom:100, }}>
                   <TouchableHighlight 
                     activeOpacity={0.8} 

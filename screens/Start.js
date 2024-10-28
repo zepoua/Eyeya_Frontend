@@ -29,7 +29,6 @@ const Start = ({ navigation }) => {
   }
 
   useEffect(() => {
-    // Attendez quelques secondes (par exemple, 3 secondes) puis naviguez vers la page suivante
     const timer = setTimeout(() => {
       load();
     }, 3000);

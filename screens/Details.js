@@ -1,6 +1,6 @@
 // Details.js
 import React, {useEffect, useState} from 'react';
-import { View, Text, ScrollView, Image, StyleSheet, TouchableOpacity, Modal, Button, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { View, Text, ScrollView, Image, StyleSheet, TouchableOpacity, Modal, Button, ActivityIndicator, RefreshControl } from 'react-native';
 import CommentModal from './Commentaires';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import StarRating from 'react-native-star-rating'; // Vous pouvez utiliser une bibliothèque pour les étoiles

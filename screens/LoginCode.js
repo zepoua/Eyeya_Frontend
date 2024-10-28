@@ -44,7 +44,7 @@ const LoginCode = ({navigation, route}) => {
       .then((response) => response.json())
       .then((data) => {
         if (data.status == 'success') {
-          const client_data = data.data;
+          const user_data = data.data2;
           if (user_data.icone) {
             user_data.icone = {
               uri: '',
@@ -68,7 +68,7 @@ const LoginCode = ({navigation, route}) => {
               fileName: user_data.image3,
             };
           }
-            AsyncStorage.setItem('formDataToSend', JSON.stringify(client_data))
+            AsyncStorage.setItem('formDataToSend', JSON.stringify(user_data))
             .then(() => {
               setError(data.message);
               setModalVisible(true);
@@ -86,7 +86,8 @@ const LoginCode = ({navigation, route}) => {
           })
         } else {
           setError(data.message);
-          setModalVisible(true);      }
+          setModalVisible(true);      
+        }
       }).catch((error) => {setError('Verifiez votre connexion')
       setModalVisible(true)})
       .finally(() => setLoading(false));

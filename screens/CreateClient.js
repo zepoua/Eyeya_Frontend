@@ -23,13 +23,16 @@ const CreateClient = ({navigation}) => {
 
     const handleFieldChange = (fieldName, text) => {
       if (fieldName === 'nom') {
-        text = text.toUpperCase();
+        setFormData({
+          ...formData,
+          ['nom']: text.toUpperCase(),
+        });      
+      }else{
+        setFormData({
+          ...formData,
+          [fieldName]: text,
+        });
       }
-    
-      setFormData({
-        ...formData,
-        [fieldName]: text,
-      });
     };
 
     const selectImage = () => {
@@ -58,7 +61,7 @@ const CreateClient = ({navigation}) => {
     clientData.append('prenom', formData.prenom);
     clientData.append('email', formData.email);
     clientData.append('telephone', formData.telephone);
-    if (image && image.uri) {
+    if (image.uri) {
       clientData.append('icone', {
         uri: image.uri,
         type: image.type,
@@ -78,7 +81,7 @@ const CreateClient = ({navigation}) => {
       }
     };
 
-    const apiUrl = `${apiConfig.apiUrl}/client`;
+    const apiUrl = `${apiConfig.apiUrl}/code_client`;
     const requestOptions = {
       method: 'POST',
       headers: {
@@ -91,30 +94,23 @@ const CreateClient = ({navigation}) => {
       .then((response) => response.json())
       .then((data) => {
         if (data.status == 'success') {
-          // setError(data.message);
-          // setModalVisible(true);
-          // setTimeout(() => {
-          //   navigation.reset({
-          //     index: 0,
-          //     routes: [{ name: 'Home' }],
-          //   });
-          // }, 2000);
-          const id = data.client_id;
-          const dataToStoreLocally ={
-          id,
-          ...formDataToSend, }
-            AsyncStorage.setItem('formDataToSend', JSON.stringify(dataToStoreLocally))
-            .then(() => {
-              setError(data.message);
-              setModalVisible(true);
-              setTimeout(() => {
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Home' }],
-                });
-              }, 2000); 
-            }); 
+          // const id = data.client_id;
+          // const dataToStoreLocally ={
+          // id,
+          // ...formDataToSend, }
+          //   AsyncStorage.setItem('formDataToSend', JSON.stringify(dataToStoreLocally))
+          //   .then(() => {
+          //     setError(data.message);
+          //     setModalVisible(true);
+          //     setTimeout(() => {
+          //       navigation.reset({
+          //         index: 0,
+          //         routes: [{ name: 'Home' }],
+          //       });
+          //     }, 2000); 
+          //   }); 
           // setCode('');
+          navigation.navigate('ConfirmationClient', {formDataToSend})     
       } else {
           setError(data.message);
           setModalVisible(true);

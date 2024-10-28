@@ -19,11 +19,10 @@ const UserParDomaine = ({route, navigation}) => {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState(null);
-
   const { domaine_data } = route.params;
   const { latitude, longitude } = domaine_data.currentLocation;
   const domaine_id = domaine_data.domaine_id;
+
   screenHeight = Dimensions.get('window').height;
 
   const fetchData = async () => {
@@ -50,6 +49,7 @@ const UserParDomaine = ({route, navigation}) => {
       setData(formattedUsers);
       setFilteredData(formattedUsers);
     } catch (error) {
+      console.log(error);
       setOffInternet(true)
     } finally {
       setLoading(false);
@@ -87,6 +87,7 @@ const UserParDomaine = ({route, navigation}) => {
         .then(response => response.json())
         .then(filtered => setFilteredData(filtered))
         .catch(error => {
+          console.log(error);
           setOffInternet(true)
         });
     }
@@ -96,9 +97,9 @@ const UserParDomaine = ({route, navigation}) => {
     setModalVisible(true);
   };
 
-  const handleFilterApply = () => {
+  const handleFilterApply = (value) => {
     setLoading(true); // Ajoutez cette ligne pour activer le chargement pendant la requête
-    const apiUrl = `${apiConfig.apiUrl}/user?domaine_id=${domaine_id}&latitude=${latitude}&longitude=${longitude}&distance=${selectedFilter}`;
+    const apiUrl = `${apiConfig.apiUrl}/user?domaine_id=${domaine_id}&latitude=${latitude}&longitude=${longitude}&distance=${value}`;
     fetch(apiUrl)
       .then(response => response.json())
       .then(initialData => {
@@ -122,6 +123,7 @@ const UserParDomaine = ({route, navigation}) => {
             setFilteredData(formattedUsers);
       })
       .catch(error => {
+        console.log(error);
         setOffInternet(true)
       })
       .finally(() => {
@@ -129,7 +131,6 @@ const UserParDomaine = ({route, navigation}) => {
         setModalVisible(false);
       });
   };
-
 
   const radio_props = [
     { label: 'Inférieur ou egale à 10 km', value: '1' },
@@ -282,8 +283,7 @@ const UserParDomaine = ({route, navigation}) => {
             radio_props={radio_props}
             initial={-1}
             onPress={(value) => {
-              setSelectedFilter(value);
-              handleFilterApply();
+              handleFilterApply(value);
             }}
             formHorizontal={false}
           />

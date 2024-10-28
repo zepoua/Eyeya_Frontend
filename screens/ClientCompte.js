@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableHighlight, Image, StyleSheet, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableHighlight, Image, StyleSheet, ScrollView, Modal, ActivityIndicator, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiConfig from '../services/config';
 import * as ImagePicker from 'react-native-image-picker';
@@ -18,6 +18,7 @@ const ClientCompte = () => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [image, setImage] = useState('');
+  const [isVisible, setVisible] = useState(false);
 
   const getData = async () => {
     try {
@@ -68,54 +69,53 @@ const ClientCompte = () => {
       });
     };
 
-    const handleSave = () => {
-      setLoading(true);
+  const handleSave = () => {
+    setLoading(true);
+  
+    const formData = new FormData();
+    formData.append('id', editedData.id);
+    formData.append('nom', editedData.nom);
+    formData.append('prenom', editedData.prenom);
+    formData.append('email', editedData.email);
+    formData.append('telephone', editedData.telephone);
+  
+    // Assurez-vous que l'icone existe et contient les propriétés nécessaires
+      formData.append('icone', {
+        uri: editedData.icone.uri,
+        type: editedData.icone.type,
+        name: editedData.icone.fileName,
+      });
     
-      const formData = new FormData();
-      formData.append('id', editedData.id);
-      formData.append('nom', editedData.nom);
-      formData.append('prenom', editedData.prenom);
-      formData.append('email', editedData.email);
-      formData.append('telephone', editedData.telephone);
-    
-      // Assurez-vous que l'icone existe et contient les propriétés nécessaires
-        formData.append('icone', {
-          uri: editedData.icone.uri,
-          type: editedData.icone.type,
-          name: editedData.icone.fileName,
-        });
       
-        
-      const apiUrl = `${apiConfig.apiUrl}/update_client`;
-      const requestOptions = {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      };
-    
-      fetch(apiUrl, requestOptions)
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.status == 'success') {
-            setError(data.message);
-            setModalVisible(true);
-            updateStoredData(editedData);
-            setClientData(editedData);
-            setIsEditing(false);
-          } else {
-            setError(data.message);
-            setModalVisible(true);
-          }
-        })
-        .catch((error) => {
-          setError('Verifiez votre connexion')
-          setModalVisible(true)
-        })
-        .finally(() => setLoading(false));
+    const apiUrl = `${apiConfig.apiUrl}/update_client`;
+    const requestOptions = {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     };
-    
+  
+    fetch(apiUrl, requestOptions)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status == 'success') {
+          setError(data.message);
+          setModalVisible(true);
+          updateStoredData(editedData);
+          setClientData(editedData);
+          setIsEditing(false);
+        } else {
+          setError(data.message);
+          setModalVisible(true);
+        }
+      })
+      .catch((error) => {
+        setError('Verifiez votre connexion')
+        setModalVisible(true)
+      })
+      .finally(() => setLoading(false));
+  };
 
   const user = () =>{
     navigation.navigate('Client_User', {clientData})
@@ -134,6 +134,46 @@ const ClientCompte = () => {
 
   const closeModal = () => {
     setModalVisible(false);
+  };
+
+  const logOut =  () => {
+    AsyncStorage.removeItem('formDataToSend');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'LoginClient' }],
+    });  }
+
+  const closeModal2 = () => {
+    setVisible(false)
+  };
+
+  const onClose2 = () => {
+    setVisible(false);
+  };
+
+  const Alert = ({ isVisible, onClose}) => {
+    return (
+      <Modal
+        visible={isVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, {backgroundColor:'white'}]}>
+            <Text style={{ color: 'black', fontWeight:'bold' }}>Voulez-vous vraiment vous deconnecter ?</Text>
+            <View style={{flexDirection:'row', justifyContent:'space-around', alignItems:'center', marginTop: 16, width:'50%'}}>
+              <TouchableOpacity onPress={(logOut)}>
+                <Text style={{ color: '#1570D8', fontWeight:'bold'}}>Oui</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onClose2}>
+                <Text style={{ color: '#000000', fontWeight:'bold'}}>Non</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   return (
@@ -156,24 +196,36 @@ const ClientCompte = () => {
               )}
               <Text style={{textAlign:'center', alignSelf:'center', left:10,fontSize: 16, fontWeight: 'bold', color:'black', maxWidth:'70%',}}>{editedData.nom} {editedData.prenom}</Text>
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', top:30, marginBottom:40,}}>
-                {!isEditing && (
-                <TouchableHighlight 
-                activeOpacity={0.8} 
-                underlayColor='#A5B1AFE5' 
-                onPress={() => handleEdit()}
-                style={{backgroundColor:'#5C5959', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
-                  <Text style={{ color:'white', fontSize:14}}>Modifier mon Profil</Text>
-                </TouchableHighlight>
-              )}
-              <TouchableHighlight 
-                  activeOpacity={0.8} 
-                  underlayColor='#7698F3'
-                  onPress={() => user()}
-                  style={{backgroundColor:'#3792CE', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
-                  <Text style={{ color:'white', fontSize:14}}>Compte Professionnel </Text>
-                </TouchableHighlight>
-            </View>
+            {!isEditing && (
+              <View>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', top:30,}}>
+                  <TouchableHighlight 
+                    activeOpacity={0.8} 
+                    underlayColor='#A5B1AFE5' 
+                    onPress={() => handleEdit()}
+                    style={{backgroundColor:'#5C5959', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
+                    <Text style={{ color:'white', fontSize:12}}>Modifier mon Profil</Text>
+                  </TouchableHighlight>
+                  <TouchableHighlight 
+                    activeOpacity={0.8} 
+                    underlayColor='#7698F3'
+                    onPress={() => user()}
+                    style={{backgroundColor:'#3792CE', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
+                    <Text style={{ color:'white', fontSize:12}}>Compte Professionnel </Text>
+                  </TouchableHighlight>
+                </View>
+                <View style={{ alignItems: 'center', justifyContent: 'center',marginTop:40, marginBottom:20,}}>
+                  <TouchableHighlight 
+                    activeOpacity={0.8} 
+                    underlayColor='#272727'
+                    onPress={() => {setVisible(true)}}
+                    style={{backgroundColor:'#000000', height:40, width:'80%', borderRadius:50, justifyContent:'center', alignItems:'center', margin:3}}>
+                    <Text style={{ color:'white', fontSize:12}}>Deconnexion</Text>
+                  </TouchableHighlight>
+                </View>
+              </View>
+            )}
+
             <View style={{top:20}}>
               <Text style={styles.libelle}>Nom</Text>
               <TextInput
@@ -199,26 +251,26 @@ const ClientCompte = () => {
                 onChangeText={(text) => handleChangeText('email', text)}
                 value={editedData.email} editable={isEditing}/>
 
-              {isEditing && (
-                <View style={styles.input1}>
-                  <Text style={styles.libelle}>
-                    Modifier votre photo
+            {isEditing && (
+              <View style={styles.input1}>
+                <Text style={styles.libelle}>
+                  Modifier votre photo
+                </Text>
+                <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
+                  <TouchableHighlight 
+                    onPress={() => selectImage()}
+                    style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
+                    <View style={{flexDirection:'row'}}>
+                      <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
+                      <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
+                    </View>
+                  </TouchableHighlight>
+                  <Text style={{width:'50%', fontSize:12, top:10}}>
+                    {editedData.icone.fileName ? `  ${editedData.icone.fileName.substring(0, 20)}...` : ''}
                   </Text>
-                  <View style={{flexDirection:'row', justifyContent:'space-between'}}> 
-                    <TouchableHighlight 
-                      onPress={() => selectImage()}
-                      style={{backgroundColor:'#3792CE',height:35, width:'40%', borderRadius:50, justifyContent:'center', alignItems:'center', top:5, marginBottom:15}}>
-                      <View style={{flexDirection:'row'}}>
-                        <Icon name="add-a-photo" size={20} color="#FFFFFFE5" style={{marginRight:10,}}/>
-                        <Text style={{ color:'white', fontSize:14, textAlign:'center'}}>Cliquez-ici</Text>
-                      </View>
-                    </TouchableHighlight>
-                    <Text style={{width:'50%', fontSize:12, top:10}}>
-                      {editedData.icone.fileName ? `  ${editedData.icone.fileName.substring(0, 20)}...` : ''}
-                    </Text>
-                  </View>
                 </View>
-              )}
+              </View>
+            )}
 
             {isEditing && (
               <View style={{ flexDirection: 'column', alignItems: 'center', top:40, marginBottom:100}}>
@@ -268,6 +320,10 @@ const ClientCompte = () => {
           onClose={closeModal}
           message={error}
         />
+        <Alert
+          isVisible={isVisible}
+          onClose={closeModal2}
+        />
     </View>
   );
 };
@@ -282,7 +338,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color:'black',
-    left:10,
+    left:5,
   },
   loadingContainer: {
     flex: 1,

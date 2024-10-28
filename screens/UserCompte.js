@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Modal, TouchableHighlight, Image, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, Modal, TouchableHighlight, Image, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiConfig from '../services/config';
 import * as ImagePicker from 'react-native-image-picker';
@@ -11,8 +11,11 @@ import CustomModal from './test';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Dimensions } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
-const UserCompte = ({navigation}) => {
+const UserCompte = () => {
+
+  const navigation = useNavigation();
 
   const [clientData, setClientData] = useState({});
   const [editedData, setEditedData] = useState({});
@@ -25,6 +28,7 @@ const UserCompte = ({navigation}) => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
   const screenHeight = Dimensions.get('window').height;
+  const [isVisible, setVisible] = useState(false);
 
   
   useEffect(() => {
@@ -32,13 +36,13 @@ const UserCompte = ({navigation}) => {
       try {
         const storedData = await AsyncStorage.getItem('formDataToSend');
         if (storedData !== null) {
-          const parsedData = JSON.parse(storedData);
+          const parsedData = JSON.parse(storedData);          
           setEditedData(parsedData);
           setClientData(parsedData);
           const apiUrl1 = `${apiConfig.apiUrl}/notation/${parsedData.user_id}`;
           fetch(apiUrl1)
             .then((response) => response.json())
-            .then((data) => {
+            .then((data) => {              
               setRating(data.moyenne_notations);
               setVues(data.vues);
             })
@@ -213,8 +217,48 @@ const UserCompte = ({navigation}) => {
     setEditedData(prevData => ({ ...prevData, [key]: value }));
   };
 
+  const logOut =  () => {
+    AsyncStorage.removeItem('formDataToSend');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });  }
+
   const closeModal = () => {
     setModalVisible(false);
+  };
+
+  const closeModal2 = () => {
+    setVisible(false)
+  };
+
+  const onClose2 = () => {
+    setVisible(false);
+  };
+
+  const Alert = ({ isVisible, onClose}) => {
+    return (
+      <Modal
+        visible={isVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, {backgroundColor:'white'}]}>
+            <Text style={{ color: 'black', fontWeight:'bold' }}>Voulez-vous vraiment vous deconnecter ?</Text>
+            <View style={{flexDirection:'row', justifyContent:'space-around', alignItems:'center', marginTop: 16, width:'50%'}}>
+              <TouchableOpacity onPress={(logOut)}>
+                <Text style={{ color: '#1570D8', fontWeight:'bold'}}>Oui</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onClose2}>
+                <Text style={{ color: '#000000', fontWeight:'bold'}}>Non</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   return (
@@ -225,7 +269,7 @@ const UserCompte = ({navigation}) => {
             <View style={{ flex:1, width: '100%', height:screenHeight/4, alignItems:'center', justifyContent:'center',}}>
               {images &&(
                 <Swiper 
-                style={{height: '100%', position:'static'}} 
+                style={{height: '100%', position:'static', height:screenHeight/4}} 
                 showsButtons={true}
                 dotStyle={{ width: 8, height: 8, backgroundColor: '#6C37CE', margin: 3 }}
                 activeDotStyle={{ width: 8, height: 8, backgroundColor: '#FDE03A', margin: 3 }}
@@ -249,7 +293,7 @@ const UserCompte = ({navigation}) => {
               </Swiper>
               )}
             </View>
-            <View style={{paddingLeft:10, top:-50, flexDirection: 'row', alignItems:'center', width:'100%'}}>
+            <View style={{paddingLeft:10, top:-50, flexDirection: 'row', alignItems:'center', width:'100%', justifyContent:'center'}}>
                 {editedData.image1 && (
                   <Image
                     source={{ uri: `${apiConfig.imageUrl}/${editedData.image1.fileName}` }}
@@ -280,18 +324,27 @@ const UserCompte = ({navigation}) => {
             </View>
             <View style={{flexDirection: 'column',top: 0, marginBottom: 15,}}>
 
-              <View style={{justifyContent: 'center', alignItems:'center', top:0, marginBottom:15,}}>
-                  {!isEditing && (
+            <View>
+              {!isEditing && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around', top:10, bottom:20, marginLeft:10, marginRight:10}}>
                   <TouchableHighlight 
                     activeOpacity={0.8} 
                     underlayColor='#7698F3'
                     onPress={() => handleEdit()}
-                    style={{backgroundColor:'#3792CE', height:40, width:'80%', borderRadius:50, justifyContent:'center', alignItems:'center',}}>
-                    <Text style={{ color:'white', fontSize:16}}>Modifier mon Profil</Text>
+                    style={{backgroundColor:'#3792CE', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center',}}>
+                    <Text style={{ color:'white', fontSize:12}}>Modifier mon Profil</Text>
                   </TouchableHighlight>
-                )}
+                  <TouchableHighlight 
+                    activeOpacity={0.8} 
+                    underlayColor='#272727'
+                    onPress={() => {setVisible(true)}}
+                    style={{backgroundColor:'#000000', height:40, width:'48%', borderRadius:50, justifyContent:'center', alignItems:'center',}}>
+                    <Text style={{ color:'white', fontSize:12}}>Deconnexion</Text>
+                  </TouchableHighlight>
+                </View>
+              )}
               </View>
-              <View style={{left:10,top:20}}>
+              <View style={{left:5,top:34}}>
               <Text style={styles.libelle}>Nom de l'Entreprise</Text>
                 <TextInput
                   style={styles.input}
@@ -526,6 +579,10 @@ const UserCompte = ({navigation}) => {
           onClose={closeModal}
           message={error}
         />
+        <Alert
+          isVisible={isVisible}
+          onClose={closeModal2}
+        />
     </View>
   );
 };
@@ -556,7 +613,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color:'black',
-    left:10,
+    left:5,
   },
 
   input:{

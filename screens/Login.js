@@ -1,4 +1,4 @@
-import { View, Text, Modal, TextInput, StyleSheet, TouchableHighlight, ActivityIndicator } from 'react-native'
+import { View, Text, Modal, TextInput, StyleSheet, TouchableHighlight, ActivityIndicator, BackHandler } from 'react-native'
 import react, { useState } from 'react';
 import apiConfig from '../services/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -96,7 +96,7 @@ const Login = ({navigation}) => {
       email: '',
     })
     setError('')
-    navigation.goBack();
+    BackHandler.exitApp();
   }
 
   const closeModal = () => {

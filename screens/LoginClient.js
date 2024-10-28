@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {View, Text, TextInput, StyleSheet, TouchableHighlight, Modal, ActivityIndicator, ScrollView} from 'react-native';
+import {View, Text, TextInput, StyleSheet, TouchableHighlight, Modal, ActivityIndicator, ScrollView, BackHandler} from 'react-native';
 import apiConfig from '../services/config';
 import CustomModal from './test';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -62,7 +62,7 @@ const LoginClient = ({ navigation }) => {
       telephone: '',
     });
     setError('')
-    navigation.goBack();
+    BackHandler.exitApp();
   };
 
   const closeModal = () => {

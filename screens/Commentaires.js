@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, FlatList, TextInput, StyleSheet, Image, ActivityIndicator, Button, RefreshControl } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, FlatList, TextInput, StyleSheet, Image, ActivityIndicator, Button, RefreshControl, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiConfig from '../services/config';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,15 +30,15 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
           }
         })
         .catch(error => {
-          setOffInternet(true)
-        }).finally(()=>setLoading(false))
+          setOffInternet(true);
+        }).finally(() => setLoading(false));
     }
   };
 
   const get = () => {
     setLoading(true);
     commentaire();
-  }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -51,7 +51,7 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
     setTimeout(() => {
       commentaire();
       setRefreshing(false);
-      setSending(false)
+      setSending(false);
     }, 2000);
   };
 
@@ -90,15 +90,15 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
       fetch(apiUrl, requestOptions)
         .then(response => response.json())
         .then(data => {
-          if (data.status == 'success') {
-            setSendingText('')
-            setSending(false)
+          if (data.status === 'success') {
+            setSendingText('');
+            setSending(false);
             commentaire();
-          } 
+          }
         })
         .catch(error => {
-          setReSending(true)
-        })
+          setReSending(true);
+        });
     }
   };
 
@@ -106,7 +106,7 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now - date;
-        
+
     if (diff < 60 * 1000) {
       return 'Maintenant';
     } else if (diff < 60 * 60 * 1000) {
@@ -115,15 +115,14 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
     } else if (diff < 24 * 60 * 60 * 1000) {
       return 'Hier';
     } else {
-      // Si c'est plus vieux, retournez la date
       const options = { day: 'numeric', month: 'short' };
       return date.toLocaleDateString('fr-FR', options);
     }
   };
 
   const resend = async () => {
-    setReSending(false)
-    setSending(true)
+    setReSending(false);
+    setSending(true);
 
     const storedData = await AsyncStorage.getItem('formDataToSend');
 
@@ -148,112 +147,115 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
       fetch(apiUrl, requestOptions)
         .then(response => response.json())
         .then(data => {
-          if (data.status == 'success') {
-            setSendingText('')
-            setSending(false)
+          if (data.status === 'success') {
+            setSendingText('');
+            setSending(false);
             commentaire();
-          } 
+          }
         })
         .catch(error => {
-          setReSending(true)
-        })
+          setReSending(true);
+        });
     }
-  }
+  };
 
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       <Modal
         visible={isVisible}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => onClose()}
-        scrollable={true} // Ajoutez cette ligne
-        onSwipeComplete={onClose} // Ajoutez cette ligne
-        swipeDirection="down">
-        <View style={{ flex: 1, justifyContent: 'flex-end', borderTopLeftRadius: 25, borderTopRightRadius: 25 }}>
-        <View style={{ backgroundColor: '#F5F7EB',borderTopLeftRadius: 25, borderTopRightRadius: 25 }}>
+        onRequestClose={onClose}
+        onSwipeComplete={onClose}
+        swipeDirection="down"
+      >
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <View style={styles.modalContent}>
 
-          <TouchableOpacity
-            style={{padding: 16, alignItems: 'center', }}
-            onPress={onClose}>
-            <Text stle={{color:'#361313', fontWeight:'bold', fontSize:14}}>Fermer</Text>
-          </TouchableOpacity>
-          <View style={{ borderBottomWidth:1, width:'100%', marginBottom:15, borderColor:'gray' }}>
-            <Text style={{textAlign:'center', color:'black', fontSize:18, fontWeight:'bold'}}>{nbre} Commentaire(s)</Text>
-         </View>
-        </View>
-        <View style={{ backgroundColor: '#F5F7EB', padding: 16,}}>
-          {loading ? (
-            <View style={styles.loadingContainer}>          
-              <ActivityIndicator size="small" color="#3792CE" />
-              <Text style={{color:'black'}}>chargement...</Text>
+            <TouchableOpacity
+              style={{ padding: 16, alignItems: 'center' }}
+              onPress={onClose}
+            >
+              <Text style={{ color: '#361313', fontWeight: 'bold', fontSize: 14 }}>Fermer</Text>
+            </TouchableOpacity>
+
+            <View style={styles.header}>
+              <Text style={styles.headerText}>{nbre} Commentaire(s)</Text>
             </View>
-          ): offInternet ? (
-            <View style={{ flex:1, justifyContent: 'center', alignItems: 'center'}}>
-              <Text style={{color:'black', marginBottom:5}}>Erreur de connexion</Text>
-              <Button title='Reessayer' color={'#888B8B'} onPress={handleRetry} titleStyle={{ color: 'black' }}></Button>
-            </View>
-          ) : (
-            <FlatList
-              data={comments}
-              keyExtractor={item => (item.id != null ? item.id.toString() : Math.random().toString())}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor="#3792CE" 
-                />
-              }
-              renderItem={({ item }) => (
-                <View key={item.id != null ? item.id.toString() : Math.random().toString()} style={{ marginBottom: 15, flexDirection: 'row' }}>
-                  <View style={styles.container}>
-                    <Image
-                      source={{ uri: `${apiConfig.imageUrl}/${item.icone}` }}
-                      style={styles.circleImage}
+
+            <View style={styles.content}>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#3792CE" />
+                  <Text style={{ color: 'black' }}>chargement...</Text>
+                </View>
+              ) : offInternet ? (
+                <View style={styles.errorContainer}>
+                  <Text style={{ color: 'black', marginBottom: 5 }}>Erreur de connexion</Text>
+                  <Button title="Reessayer" color={'#888B8B'} onPress={handleRetry} titleStyle={{ color: 'black' }} />
+                </View>
+              ) : (
+                <FlatList
+                  data={comments}
+                  keyExtractor={item => item.id?.toString() || Math.random().toString()}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                      tintColor="#3792CE"
                     />
-                  </View>
-                  <View style={{ flex: 1, flexDirection: 'column', marginLeft: 5 }}>
-                    <Text style={{ color: 'black', fontWeight: 'bold' }}>{item.client}</Text>
-                    <Text style={{ color: 'black' }}>{item.commentaire}</Text>
-                    <Text style={styles.dateText}>{formatDateTime(item.date)}</Text>
+                  }
+                  renderItem={({ item }) => (
+                    <View key={item.id?.toString() || Math.random().toString()} style={styles.commentContainer}>
+                      <View style={styles.container}>
+                        <Image
+                          source={{ uri: `${apiConfig.imageUrl}/${item.icone}` }}
+                          style={styles.circleImage}
+                        />
+                      </View>
+                      <View style={styles.commentContent}>
+                        <Text style={styles.commentAuthor}>{item.client}</Text>
+                        <Text style={styles.commentText}>{item.commentaire}</Text>
+                        <Text style={styles.dateText}>{formatDateTime(item.date)}</Text>
+                      </View>
+                    </View>
+                  )}
+                />
+              )}
 
+              {sending && (
+                <View style={styles.sendingContainer}>
+                  <View style={styles.sendingTextContainer}>
+                    <Text style={styles.messageText}>{sendingText}</Text>
                   </View>
+                  {resending ? (
+                    <Icon name="refresh" size={25} color="#940606E5" onPress={resend} />
+                  ) : (
+                    <ActivityIndicator size="small" color="#3792CE" />
+                  )}
                 </View>
               )}
-            />
-          )}
 
-          {sending && (
-            <View style={{flexDirection:'row', padding: 10, marginBottom: 5, alignSelf:'flex-start'}}>
-              <View style={styles.sending_text}>
-                <Text style={styles.messageText}>{sendingText}</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ajouter un commentaire..."
+                  value={newComment}
+                  onChangeText={(text) => setNewComment(text)}
+                />
+                <TouchableOpacity
+                  onPress={handleAddComment}
+                  style={styles.sendButton}
+                  disabled={!newComment.trim()} // Désactiver si le champ est vide
+                >
+                  <Icon name="send" size={20} color={newComment.trim() ? '#4CAF50' : 'gray'} />
+                </TouchableOpacity>
               </View>
-              {resending ? (
-                <Icon name="refresh" size={25} color="#940606E5" onPress={resend}/>
-              ) : (
-                <ActivityIndicator size="small" color="#3792CE"/>
-              )}
             </View>
-          )}
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-            <TextInput
-              style={{ backgroundColor: 'white', flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 15, padding: 8 }}
-              placeholder="Ajouter un commentaire..."
-              value={newComment}
-              onChangeText={(text) => setNewComment(text)}
-            />
-            <TouchableOpacity
-              onPress={handleAddComment}
-              style={{ marginLeft: 8 }}
-              disabled={!newComment.trim()} // Désactiver si le champ est vide
-            >
-              <Icon name="send" size={20} color={newComment.trim() ? '#4CAF50' : 'gray'} />
-            </TouchableOpacity>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
     </View>
   );
 };
@@ -261,32 +263,99 @@ const CommentModal = ({ isVisible, onClose, userId }) => {
 export default CommentModal;
 
 const styles = StyleSheet.create({
-  container: {},
-  loadingContainer: {
+  modalContent: {
+    backgroundColor: '#F5F7EB',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    height: '70%', // Limite la hauteur à 70% de l'écran
+  },
+  header: {
+    borderBottomWidth: 1,
+    width: '100%',
+    marginBottom: 15,
+    borderColor: 'gray',
+  },
+  headerText: {
+    textAlign: 'center',
+    color: 'black',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  content: {
     flex: 1,
+  },
+  commentContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderColor: '#888B8B',
+  },
+  container: {
+    marginRight: 10,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  sending_text: {
-    backgroundColor: '#91DA6679',
-    borderRadius: 8,
-    maxWidth: '80%',
-    padding:5,
-    marginRight:10
-  },
-  messageText: {
-    fontSize: 12,
-    color:'black',
   },
   circleImage: {
-    width: 33,
-    height: 33,
+    width: 35,
+    height: 35,
     borderRadius: 50,
   },
-  dateText: {
-    fontSize: 12,
+  commentContent: {
+    flex: 1,
+  },
+  commentAuthor: {
+    fontWeight: 'bold',
     color: 'black',
+  },
+  commentText: {
+    color: 'black',
+  },
+  dateText: {
     marginTop: 5,
+    color: '#808080',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  errorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 15,
+    alignItems: 'center',
+    borderTopWidth: 0.5,
+    borderColor: '#888B8B',
+  },
+  input: {
+    flex: 1,
+    color: 'black',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+    marginRight: 10,
+  },
+  sendButton: {
+    padding: 5,
+  },
+  sendingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  sendingTextContainer: {
+    backgroundColor: '#DBDADA',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+  },
+  messageText: {
+    color: 'black',
   },
 });

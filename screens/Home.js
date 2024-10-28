@@ -194,8 +194,8 @@ const Home = ({navigation}) => {
           autoplay={true}
           autoplayTimeout={7}
           style={{height: '100%',}} 
-          dotStyle={{ width: 8, height: 8, backgroundColor: '#6C37CE', margin: 3 }}
-          activeDotStyle={{ width: 8, height: 8, backgroundColor: '#FDE03A', margin: 3 }}>              
+          dotStyle={{ width: 8, height: 8, backgroundColor: '#5F6666', margin: 3 }}
+          activeDotStyle={{ width: 8, height: 8, backgroundColor: '#0B79A5', margin: 3 }}>              
           <View style={styles.slide}>
               <Image
                 source={require('../assets/images/test1.jpeg')}

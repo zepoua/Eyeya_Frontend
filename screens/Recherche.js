@@ -30,7 +30,7 @@ const Recherche = ({route, navigation}) => {
       // Tentative de récupération de la position avec une limite de tentatives
       let position = null;
       let attempts = 0;
-      const maxAttempts = 10; // Nombre maximal de tentatives
+      const maxAttempts = 5; // Nombre maximal de tentatives
     
       while (position === null && attempts < maxAttempts) {
         try {
@@ -38,8 +38,12 @@ const Recherche = ({route, navigation}) => {
           const { latitude, longitude } = position.coords;
           setCurrentLocation({ latitude, longitude });
         } catch (error) {
-          if (position === null && attempts === 9) {
+          if (position === null && attempts === 4) {
             Alert.alert('Impossible de récupérer la position. Veuillez activer votre localisation.');
+            // position.coords.latitude = 6.11
+            // position.coords.longitude = 1.3
+            // const { latitude, longitude } = position.coords;
+            // setCurrentLocation({ latitude, longitude });
             setLoading(false);
             setOffInternet(true);
           }

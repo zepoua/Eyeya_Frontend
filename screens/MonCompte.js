@@ -32,16 +32,12 @@ const MonCompte = () => {
   let componentToRender = null;
 
   if (load) {
-    if (Object.keys(dataPhone).length > 6) {
+    if (Object.keys(dataPhone).length > 12) {
       componentToRender = <UserCompte/>;
     }else{
       componentToRender = <ClientCompte/>;
     }
   }
-
-    if (Object.keys(dataPhone).length > 6) {
-      componentToRender = <UserCompte/>;
-    }
 
   return (
     <View style={styles.container}>
